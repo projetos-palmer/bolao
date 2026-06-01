@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Página Inicial — Bolão Copa{% endblock %}
+{% block content %}
+<!-- Hero -->
+<div class="text-center py-12 px-4">
+  <div class="text-7xl mb-4">⚽</div>
+  <h1 class="text-4xl md:text-5xl font-extrabold text-campo mb-3">Bolão Copa do Mundo 2026</h1>
+  <p class="text-xl text-gray-600 mb-8 max-w-xl mx-auto">Aposte na sua seleção, acerte o placar e ganhe prêmios!</p>
+  <div class="flex justify-center gap-4 flex-wrap">
+    {% if user.is_authenticated %}
+      <a href="{% url 'boloes:bolao_list' %}" class="bg-campo text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-campo-dark transition shadow-lg">🏆 Ver Bolões</a>
+      <a href="{% url 'boloes:meus_jogos' %}" class="bg-ouro text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-yellow-600 transition shadow-lg">📋 Meus Jogos</a>
+    {% else %}
+      <a href="{% url 'contas:cadastro' %}" class="bg-campo text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-campo-dark transition shadow-lg">🏆 Participar agora</a>
+      <a href="{% url 'contas:login' %}" class="bg-ouro text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-yellow-600 transition shadow-lg">🔑 Entrar</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Jogos em destaque -->
+{% if jogos %}
+<div class="mt-8">
+  <h2 class="text-2xl font-extrabold text-gray-800 mb-4">⏰ Próximas Partidas</h2>
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for jogo in jogos %}
+    <div class="bg-white rounded-2xl shadow hover:shadow-md transition p-4">
+      <div class="flex items-center justify-between gap-2 text-center">
+        <div class="flex-1">
+          <p class="text-3xl">{{ jogo.selecao_mandante.icone|default:"🏴" }}</p>
+          <p class="font-bold text-sm mt-1">{{ jogo.selecao_mandante.sigla }}</p>
+        </div>
+        <div class="px-2">
+          <p class="text-xs text-gray-500">{{ jogo.data_hora|date:"d/m H:i" }}</p>
+          <p class="text-2xl font-extrabold text-campo">X</p>
+          <span class="text-xs px-2 py-0.5 rounded-full
+            {% if jogo.status == 'aberto' %}bg-green-100 text-green-800
+            {% elif jogo.status == 'encerrado' or jogo.status == 'resultado' %}bg-gray-100 text-gray-600
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ jogo.get_status_display }}
+          </span>
+        </div>
+        <div class="flex-1">
+          <p class="text-3xl">{{ jogo.selecao_visitante.icone|default:"🏴" }}</p>
+          <p class="font-bold text-sm mt-1">{{ jogo.selecao_visitante.sigla }}</p>
+        </div>
+      </div>
+      {% if jogo.resultado_definido %}
+        <p class="text-center font-extrabold text-campo text-xl mt-2">{{ jogo.placar_mandante }} — {{ jogo.placar_visitante }}</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

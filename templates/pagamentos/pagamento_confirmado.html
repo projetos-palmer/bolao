@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Pagamento Confirmado — Bolão Copa{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-12 text-center">
+  <div class="bg-white rounded-2xl shadow-xl p-10">
+    <div class="text-7xl mb-4">✅</div>
+    <h1 class="text-2xl font-extrabold text-campo mb-2">Pagamento confirmado!</h1>
+    <p class="text-gray-600 mb-2">Sua participação no bolão <strong>{{ participacao.bolao.nome }}</strong> está confirmada.</p>
+    <p class="text-gray-500 text-sm mb-6">Palpite: <strong>{{ participacao.placar_mandante }} x {{ participacao.placar_visitante }}</strong></p>
+    <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-green-800 text-sm">
+      🍀 Boa sorte! Acompanhe o resultado na página do bolão.
+    </div>
+    <div class="flex gap-3 justify-center">
+      <a href="{% url 'boloes:meus_jogos' %}" class="bg-campo text-white px-5 py-2 rounded-xl font-bold hover:bg-campo-dark transition">📋 Meus jogos</a>
+      <a href="{% url 'boloes:bolao_list' %}" class="bg-gray-100 text-gray-700 px-5 py-2 rounded-xl font-bold hover:bg-gray-200 transition">🏆 Mais bolões</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+import re
+from django import forms
+from validate_docbr import CPF
+from .models import Usuario
+
+cpf_validator = CPF()
+
+
+class FormCadastroUsuario(forms.ModelForm):
+    """Formulário de cadastro de usuário."""
+
+    class Meta:
+        model = Usuario
+        fields = ['cpf', 'nome_completo', 'telefone', 'email']
+        widgets = {
+            'cpf': forms.TextInput(attrs={'placeholder': '000.000.000-00', 'maxlength': '14'}),
+            'nome_completo': forms.TextInput(attrs={'placeholder': 'Seu nome completo'}),
+            'telefone': forms.TextInput(attrs={'placeholder': '(00) 99999-9999', 'maxlength': '15'}),
+            'email': forms.EmailInput(attrs={'placeholder': 'seu@email.com'}),
+        }
+
+    def clean_cpf(self):
+        cpf = self.cleaned_data.get('cpf', '')
+        if not cpf_validator.validate(cpf):
+            raise forms.ValidationError('CPF inválido. Informe um CPF válido no formato 000.000.000-00.')
+        qs = Usuario.objects.filter(cpf=cpf)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Este CPF já está cadastrado.')
+        return cpf
+
+    def clean_nome_completo(self):
+        nome = self.cleaned_data.get('nome_completo', '').strip()
+        partes = nome.split()
+        if len(partes) < 2:
+            raise forms.ValidationError('Informe o nome completo (mínimo duas palavras).')
+        return nome
+
+    def clean_telefone(self):
+        telefone = self.cleaned_data.get('telefone', '')
+        padrao = re.compile(r'^\(\d{2}\)\s?\d{4,5}-\d{4}$')
+        if not padrao.match(telefone):
+            raise forms.ValidationError('Telefone inválido. Use o formato (00) 99999-9999.')
+        qs = Usuario.objects.filter(telefone=telefone)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Este telefone já está cadastrado.')
+        return telefone
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').lower()
+        qs = Usuario.objects.filter(email=email)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Este e-mail já está cadastrado.')
+        return email
+
+
+class FormCriarSenha(forms.Form):
+    """Formulário para criação de senha após confirmação de e-mail."""
+    senha = forms.CharField(
+        label='Senha',
+        widget=forms.PasswordInput(attrs={'placeholder': 'Crie uma senha forte'}),
+        min_length=6,
+    )
+    confirmar_senha = forms.CharField(
+        label='Confirmar senha',
+        widget=forms.PasswordInput(attrs={'placeholder': 'Repita a senha'}),
+    )
+
+    def clean_senha(self):
+        senha = self.cleaned_data.get('senha', '')
+        if not re.search(r'[A-Z]', senha):
+            raise forms.ValidationError('A senha deve ter pelo menos uma letra maiúscula.')
+        if not re.search(r'[a-z]', senha):
+            raise forms.ValidationError('A senha deve ter pelo menos uma letra minúscula.')
+        if not re.search(r'\d', senha):
+            raise forms.ValidationError('A senha deve ter pelo menos um número.')
+        return senha
+
+    def clean(self):
+        dados = super().clean()
+        senha = dados.get('senha')
+        confirmar = dados.get('confirmar_senha')
+        if senha and confirmar and senha != confirmar:
+            raise forms.ValidationError('As senhas não coincidem.')
+        return dados
+
+
+class FormLoginUsuario(forms.Form):
+    """Formulário de login com e-mail ou CPF."""
+    identificador = forms.CharField(
+        label='E-mail ou CPF',
+        widget=forms.TextInput(attrs={'placeholder': 'seu@email.com ou 000.000.000-00'}),
+    )
+    senha = forms.CharField(
+        label='Senha',
+        widget=forms.PasswordInput(attrs={'placeholder': 'Sua senha'}),
+    )

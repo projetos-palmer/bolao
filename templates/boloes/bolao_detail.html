@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}{{ bolao.nome }} — Bolão Copa{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <!-- Cabeçalho -->
+  <div class="bg-white rounded-2xl shadow p-6 mb-5">
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="text-2xl font-extrabold text-campo">🏆 {{ bolao.nome }}</h1>
+        <p class="text-gray-500 text-sm mt-1">{{ bolao.jogo }}</p>
+      </div>
+      <span class="text-sm px-3 py-1 rounded-full
+        {% if bolao.status == 'aberto' %}bg-green-100 text-green-800
+        {% elif bolao.status == 'encerrado' %}bg-gray-100 text-gray-600
+        {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+        {{ bolao.get_status_display }}
+      </span>
+    </div>
+    <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+      <div class="bg-gray-50 rounded-xl p-3">
+        <p class="text-gray-500">Valor</p>
+        <p class="font-extrabold text-campo text-lg">R$ {{ bolao.valor_participacao|floatformat:2 }}</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-3">
+        <p class="text-gray-500">Prêmio estimado</p>
+        <p class="font-extrabold text-ouro text-lg">R$ {{ bolao.valor_total_premio|floatformat:2 }}</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-3">
+        <p class="text-gray-500">Participantes</p>
+        <p class="font-bold">{{ bolao.participacoes_pagas }}</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-3">
+        <p class="text-gray-500">% Premiação</p>
+        <p class="font-bold">{{ bolao.percentual_premiacao }}%</p>
+      </div>
+      <div class="bg-campo/10 rounded-xl p-3 col-span-2">
+        <p class="text-gray-500">Valor total arrecadado</p>
+        <p class="font-extrabold text-campo text-lg">R$ {{ bolao.valor_total_arrecadado|floatformat:2 }}</p>
+      </div>
+    </div>
+    <p class="mt-3 text-xs text-gray-500">Apostar até: {{ bolao.jogo.data_hora|date:"d/m/Y H:i" }} (5 min antes)</p>
+  </div>
+
+  <!-- Ações -->
+  {% if bolao.jogo.esta_aberto_para_apostas and bolao.status == 'aberto' and user.is_authenticated %}
+    <a href="{% url 'boloes:participar' bolao.pk %}" class="block w-full text-center bg-campo text-white py-3 rounded-xl font-extrabold text-lg hover:bg-campo-dark transition shadow mb-5">
+      ⚽ Fazer meu palpite — R$ {{ bolao.valor_participacao|floatformat:2 }}
+    </a>
+  {% endif %}
+
+  {% if user.is_staff %}
+    <div class="flex gap-3 mb-5 flex-wrap">
+      <a href="{% url 'boloes:bolao_update' bolao.pk %}" class="bg-ouro text-white px-4 py-2 rounded-xl font-semibold hover:bg-yellow-600 transition text-sm">✏️ Editar</a>
+      {% if bolao.jogo.resultado_definido %}
+      <form method="post" action="{% url 'boloes:gerar_ganhadores' bolao.pk %}" class="inline">
+        {% csrf_token %}
+        <button type="submit" class="bg-campo text-white px-4 py-2 rounded-xl font-semibold hover:bg-campo-dark transition text-sm">🏅 Gerar Ganhadores</button>
+      </form>
+      {% endif %}
+      <a href="{% url 'relatorios:bolao_pdf' bolao.pk %}" class="bg-gray-700 text-white px-4 py-2 rounded-xl font-semibold hover:bg-gray-800 transition text-sm">📄 PDF</a>
+    </div>
+  {% endif %}
+
+  <!-- Ganhadores -->
+  {% if ganhadores %}
+  <div class="bg-ouro/10 border border-ouro rounded-2xl p-5 mb-5">
+    <h2 class="font-extrabold text-ouro text-lg mb-3">🥇 Ganhadores</h2>
+    {% for premio in ganhadores %}
+      <div class="flex justify-between items-center py-2 border-b border-ouro/20 last:border-0 text-sm">
+        <p class="font-bold">{{ premio.usuario.nome_completo }}</p>
+        <p class="font-extrabold text-campo">R$ {{ premio.valor|floatformat:2 }}</p>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Participantes -->
+  {% if participacoes %}
+  <div class="bg-white rounded-2xl shadow p-5">
+    <h2 class="font-bold text-gray-700 mb-3">👥 Palpites</h2>
+    <!-- Cabeçalho -->
+    <div class="grid grid-cols-3 text-xs font-semibold text-gray-400 uppercase px-2 pb-2 border-b mb-1">
+      <span>Participante</span>
+      <span class="text-center">Palpite</span>
+      <span class="text-right">Status</span>
+    </div>
+    {% for p in participacoes %}
+      <div class="grid grid-cols-3 items-center py-2 border-b last:border-0 text-sm px-2">
+        <p class="truncate">{{ p.usuario.nome_completo|truncatechars:22 }}</p>
+        <p class="text-center font-mono font-bold {% if p.acertou_placar %}text-campo{% endif %}">
+          {{ p.placar_mandante }} x {{ p.placar_visitante }}{% if p.acertou_placar %} ✅{% endif %}
+        </p>
+        <div class="flex justify-end">
+          <span class="text-xs px-2 py-0.5 rounded-full
+            {% if p.status == 'confirmado' %}bg-green-100 text-green-800
+            {% elif p.status == 'aguardando' or p.status == 'pendente' %}bg-yellow-100 text-yellow-800
+            {% else %}bg-gray-100 text-gray-600{% endif %}">
+            {{ p.get_status_display }}
+          </span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

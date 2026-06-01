@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Configuração Pix — Painel{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <h1 class="text-3xl font-extrabold text-campo mb-6">💳 Configuração Pix Administrador</h1>
+
+  <!-- Dados básicos do Pix -->
+  <div class="bg-white rounded-2xl shadow p-6 mb-6">
+    <p class="text-sm text-gray-500 mb-4">Configure os dados Pix para onde os participantes farão os pagamentos.</p>
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <h2 class="text-base font-bold text-gray-700 mb-3 border-b pb-2">Dados da chave Pix</h2>
+      {% for field in form %}
+        {% if field.name in 'tipo_chave,chave_pix,nome_recebedor,banco,documento_recebedor,ativo' %}
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">{{ field.label }}</label>
+          {% render_field field class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-campo outline-none transition" %}
+          {% if field.help_text %}<p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>{% endif %}
+          {% if field.errors %}{% for e in field.errors %}<p class="text-red-600 text-xs mt-1">{{ e }}</p>{% endfor %}{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      <h2 class="text-base font-bold text-gray-700 mb-1 border-b pb-2 mt-6">⚡ Confirmação Automática — EFI Bank</h2>
+      <p class="text-xs text-gray-500 mb-3">
+        Opcional. Preencha com as credenciais da sua conta <strong>EFI Bank (ex-Gerencianet)</strong>
+        para que o sistema confirme os pagamentos Pix automaticamente, sem intervenção manual.<br>
+        Sem essas credenciais, o administrador precisa confirmar cada pagamento manualmente.
+      </p>
+      {% for field in form %}
+        {% if field.name in 'client_id_efi,client_secret_efi,certificado_efi,ambiente_efi' %}
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">{{ field.label }}</label>
+          {% render_field field class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-campo outline-none transition" %}
+          {% if field.help_text %}<p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>{% endif %}
+          {% if field.errors %}{% for e in field.errors %}<p class="text-red-600 text-xs mt-1">{{ e }}</p>{% endfor %}{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      <button type="submit" class="w-full bg-campo text-white py-3 rounded-xl font-bold hover:bg-campo-dark transition mt-2">💾 Salvar</button>
+    </form>
+  </div>
+
+  <!-- Ação: registrar webhook no EFI Bank -->
+  <div class="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-4">
+    <h2 class="font-bold text-blue-800 mb-1">🔗 Registrar Webhook no EFI Bank</h2>
+    <p class="text-xs text-blue-700 mb-3">
+      Após salvar as credenciais acima, clique aqui para registrar automaticamente a URL de notificação no EFI Bank.
+      Isso é necessário apenas uma vez (ou quando o servidor mudar de endereço).
+    </p>
+    <form method="post" action="{% url 'pagamentos:registrar_webhook_efi' %}">
+      {% csrf_token %}
+      <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition">
+        Registrar webhook agora
+      </button>
+    </form>
+  </div>
+
+  <a href="{% url 'painel:dashboard' %}" class="mt-2 inline-block text-campo underline text-sm">← Voltar ao painel</a>
+</div>
+{% endblock %}
+

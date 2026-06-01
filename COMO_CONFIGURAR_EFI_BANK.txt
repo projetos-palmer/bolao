@@ -1,0 +1,134 @@
+========================================================
+  GUIA: COMO CONFIGURAR O EFI BANK PARA CONFIRMAÇÃO
+  AUTOMÁTICA DE PIX NO SISTEMA DE BOLÃO
+========================================================
+
+O EFI Bank (antigo Gerencianet) é um banco digital que oferece
+API PIX homologada pelo Banco Central, permitindo que o sistema
+detecte automaticamente quando um PIX é recebido e confirme
+a participação do usuário sem intervenção manual.
+
+
+--------------------------------------------------------
+PASSO 1 — CRIAR A CONTA NO EFI BANK
+--------------------------------------------------------
+
+1. Acesse o site: https://efi.money
+2. Clique em "Abrir conta grátis"
+3. Escolha o tipo de conta:
+   - Pessoa Física (CPF) — para uso pessoal
+   - Pessoa Jurídica (CNPJ) — recomendado para operação do bolão
+4. Preencha os dados solicitados (nome, CPF/CNPJ, e-mail, telefone)
+5. Envie os documentos pedidos (RG ou CNH, comprovante de residência)
+6. Aguarde a aprovação da conta (geralmente em até 1 dia útil)
+7. Crie uma senha e ative a conta pelo e-mail recebido
+
+
+--------------------------------------------------------
+PASSO 2 — CRIAR UMA APLICAÇÃO NA API
+--------------------------------------------------------
+
+1. Acesse o painel EFI Bank: https://app.sejaefi.com.br
+2. No menu lateral, vá em: API > Minhas Aplicações
+3. Clique em "Criar aplicação"
+4. Dê um nome (ex: "Bolão Copa do Mundo")
+5. Marque o escopo "cob.write" e "cob.read" (criação e consulta de cobranças PIX)
+6. Marque também "webhook.write" e "webhook.read" (para notificações automáticas)
+7. Clique em "Criar"
+8. ANOTE o "Client ID" e o "Client Secret" gerados — você vai precisar deles
+
+
+--------------------------------------------------------
+PASSO 3 — GERAR O CERTIFICADO mTLS
+--------------------------------------------------------
+
+O certificado é obrigatório para autenticar as chamadas à API PIX.
+
+1. Ainda em API > Minhas Aplicações, selecione a aplicação criada
+2. Vá na aba "Certificados"
+3. Clique em "Novo certificado"
+4. Escolha o formato ".p12" (ou ".pem" se preferir)
+5. Defina uma senha para o certificado e ANOTE essa senha
+6. Faça o download do arquivo (ex: certificado.p12)
+7. Guarde este arquivo com segurança — ele é como uma chave de acesso
+
+
+ATENÇÃO: O EFI Bank tem dois ambientes:
+  - Homologação (sandbox): para testes sem dinheiro real
+    URL: https://apis-h.gerencianet.com.br
+  - Produção: para cobranças reais de verdade
+    URL: https://apis.gerencianet.com.br
+
+Comece SEMPRE em Homologação para testar antes de usar em produção.
+
+
+--------------------------------------------------------
+PASSO 4 — CONFIGURAR NO SISTEMA DE BOLÃO
+--------------------------------------------------------
+
+1. Faça login no painel administrativo do bolão
+2. Acesse: Painel > Configuração Pix
+3. Preencha os dados básicos (chave PIX, nome, banco, CPF/CNPJ)
+4. Na seção "Confirmação Automática — EFI Bank", preencha:
+
+   Client ID (EFI Bank): [cole o Client ID copiado no Passo 2]
+   Client Secret (EFI Bank): [cole o Client Secret copiado no Passo 2]
+   Certificado EFI (.p12): [faça upload do arquivo baixado no Passo 3]
+   Ambiente EFI: Homologação (para testes) ou Produção (para uso real)
+
+5. Clique em "Salvar"
+6. Em seguida, clique em "Registrar webhook agora"
+   - Isso registra automaticamente a URL de notificação no EFI Bank
+   - O sistema vai receber alertas em tempo real quando um PIX chegar
+
+
+--------------------------------------------------------
+PASSO 5 — TESTAR O FLUXO COMPLETO
+--------------------------------------------------------
+
+Em ambiente de Homologação:
+
+1. Acesse a documentação de testes do EFI Bank:
+   https://dev.efipay.com.br/docs/api-pix/
+
+2. Use o simulador de pagamento disponível no painel de homologação
+   (Painel EFI Bank > API > Ambiente de testes)
+
+3. Participe de um bolão no sistema, acesse a tela de pagamento PIX
+
+4. No simulador EFI Bank, simule o pagamento do mesmo txid
+
+5. O sistema deve confirmar o pagamento automaticamente em até 5 segundos
+
+Quando tudo estiver funcionando, troque para "Produção" nas configurações.
+
+
+--------------------------------------------------------
+OBSERVAÇÃO IMPORTANTE — REQUISITOS LEGAIS
+--------------------------------------------------------
+
+Antes de operar o bolão cobrando dinheiro de verdade:
+
+- No Brasil, bolões e apostas com dinheiro real exigem autorização
+  da Secretaria de Prêmios e Apostas do Ministério da Fazenda.
+
+- Consulte um advogado especializado antes de abrir ao público.
+
+- O EFI Bank exige que o CNPJ/CPF cadastrado seja o mesmo titular
+  da chave PIX configurada no sistema.
+
+
+--------------------------------------------------------
+SUPORTE EFI BANK
+--------------------------------------------------------
+
+Site:          https://efi.money
+Documentação:  https://dev.efipay.com.br
+WhatsApp:      (31) 3484-0050
+E-mail:        suporte@efi.money
+Chat no painel: disponível após login
+
+
+========================================================
+  Arquivo gerado pelo sistema de Bolão Copa do Mundo
+========================================================

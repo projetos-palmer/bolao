@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}Meus Jogos — Bolão Copa{% endblock %}
+{% block content %}
+<h1 class="text-3xl font-extrabold text-campo mb-6">📋 Meus Jogos</h1>
+
+{# Bloco de filtros #}
+<form method="get" action="{% url 'boloes:meus_jogos' %}" class="bg-white rounded-2xl shadow p-4 mb-6 flex flex-wrap gap-3 items-end">
+
+  <div class="flex-1 min-w-[160px]">
+    <label class="block text-xs font-semibold text-gray-500 mb-1">Status do pagamento</label>
+    <select name="status" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-campo">
+      <option value="" {% if not filtro_status %}selected{% endif %}>Todos</option>
+      <option value="aguardando" {% if filtro_status == 'aguardando' %}selected{% endif %}>⏳ Aguardando pagamento</option>
+      <option value="confirmado" {% if filtro_status == 'confirmado' %}selected{% endif %}>✅ Pagamento confirmado</option>
+      <option value="expirado" {% if filtro_status == 'expirado' %}selected{% endif %}>❌ Pagamento expirado</option>
+    </select>
+  </div>
+
+  <div class="flex-1 min-w-[160px]">
+    <label class="block text-xs font-semibold text-gray-500 mb-1">Partida</label>
+    <select name="jogo" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-campo">
+      <option value="" {% if not filtro_jogo %}selected{% endif %}>Todas as partidas</option>
+      {% for jogo in jogos_disponiveis %}
+      <option value="{{ jogo.pk }}" {% if filtro_jogo == jogo.pk|stringformat:"s" %}selected{% endif %}>
+        {{ jogo.selecao_mandante.icone }} {{ jogo.selecao_mandante.sigla }} x {{ jogo.selecao_visitante.sigla }} {{ jogo.selecao_visitante.icone }} — {{ jogo.data_hora|date:"d/m H:i" }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="flex items-center gap-2 pb-1">
+    <input type="checkbox" name="acertou" value="1" id="chk-acertou" {% if filtro_acertou == '1' %}checked{% endif %}
+           class="w-4 h-4 accent-campo cursor-pointer">
+    <label for="chk-acertou" class="text-sm font-semibold text-gray-700 cursor-pointer select-none whitespace-nowrap">🎯 Só acertos</label>
+  </div>
+
+  <div class="flex gap-2 pb-1">
+    <button type="submit" class="bg-campo text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-campo-dark transition">Filtrar</button>
+    {% if filtro_status or filtro_jogo or filtro_acertou %}
+    <a href="{% url 'boloes:meus_jogos' %}" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-200 transition">Limpar</a>
+    {% endif %}
+  </div>
+
+</form>
+
+{% if participacoes %}
+
+{# Conta quantos estão aguardando pagamento #}
+{% with pendentes=participacoes|length %}
+
+<form method="post" action="{% url 'pagamentos:criar_lote' %}" id="form-lote">
+  {% csrf_token %}
+
+  {# Barra de ação — aparece quando há pendentes #}
+  <div id="barra-pagamento" class="hidden mb-5 bg-campo/10 border border-campo/30 rounded-2xl px-5 py-4 flex flex-wrap items-center gap-3">
+    <span class="font-semibold text-campo text-sm" id="txt-selecionados">0 bolão(ões) selecionado(s)</span>
+    <span class="text-gray-400 text-sm">·</span>
+    <span class="font-bold text-campo" id="txt-total">R$ 0,00</span>
+    <button type="submit"
+      class="ml-auto bg-campo text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-campo-dark transition">
+      💸 Pagar selecionados com um PIX
+    </button>
+  </div>
+
+  <div class="space-y-4">
+    {% for p in participacoes %}
+    <div class="bg-white rounded-2xl shadow p-5 {% if p.status == 'aguardando' %}cursor-pointer hover:ring-2 hover:ring-campo/40 transition{% endif %}"
+         {% if p.status == 'aguardando' %}onclick="toggleCard(this)"{% endif %}>
+
+      {# Checkbox oculto para participações pendentes #}
+      {% if p.status == 'aguardando' %}
+      <input type="checkbox" name="participacoes" value="{{ p.pk }}"
+             class="participacao-check hidden"
+             data-valor="{{ p.bolao.valor_participacao }}">
+      {% endif %}
+
+      <div class="flex justify-between items-start mb-3">
+        <div class="flex items-center gap-3">
+          {# Indicador visual de seleção #}
+          {% if p.status == 'aguardando' %}
+          <div class="check-icon w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center flex-shrink-0 transition">
+            <svg class="w-3 h-3 text-white hidden check-mark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          {% endif %}
+          <div>
+            <p class="font-extrabold text-lg leading-tight">{{ p.bolao.nome }}</p>
+            <p class="text-sm text-gray-500">{{ p.bolao.jogo }}</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-xs px-3 py-1 rounded-full font-semibold
+            {% if p.status == 'confirmado' %}bg-green-100 text-green-800
+            {% elif p.status == 'pendente' or p.status == 'aguardando' %}bg-yellow-100 text-yellow-800
+            {% elif p.status == 'cancelado' %}bg-red-100 text-red-800
+            {% else %}bg-gray-100 text-gray-600{% endif %}">
+            {{ p.get_status_display }}
+          </span>
+          {% if p.status == 'aguardando' %}
+          <p class="text-xs text-campo font-bold mt-1">R$ {{ p.bolao.valor_participacao }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3 text-center">
+          <span class="text-3xl">{{ p.bolao.jogo.selecao_mandante.icone|default:"🏴" }}</span>
+          <span class="font-extrabold text-2xl text-campo">{{ p.placar_mandante }}</span>
+          <span class="text-gray-400">x</span>
+          <span class="font-extrabold text-2xl text-campo">{{ p.placar_visitante }}</span>
+          <span class="text-3xl">{{ p.bolao.jogo.selecao_visitante.icone|default:"🏴" }}</span>
+        </div>
+        {% if p.acertou_placar %}<span class="text-green-600 font-bold text-sm ml-auto">✅ Acertou!</span>{% endif %}
+      </div>
+
+      <div class="mt-3 flex justify-between items-center text-xs text-gray-400">
+        <span>Código: {{ p.codigo_identificador }}</span>
+        {% if p.status == 'aguardando' or p.status == 'pendente' %}
+          <a href="{% url 'pagamentos:pagamento_pix' p.pk %}"
+             onclick="event.stopPropagation()"
+             class="bg-ouro text-white px-3 py-1 rounded-lg font-semibold text-xs hover:bg-yellow-600 transition">
+            💰 Pagar só este
+          </a>
+        {% endif %}
+        {% if p.bolao.status in 'premiacao,pago' %}
+          <a href="{% url 'boloes:resultado' p.bolao.pk %}" class="text-campo underline text-xs">Ver resultado</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</form>
+
+{% endwith %}
+
+{% else %}
+  <div class="text-center py-16">
+    <p class="text-6xl mb-4">⚽</p>
+    {% if filtro_status or filtro_jogo or filtro_acertou %}
+      <p class="text-xl text-gray-500">Nenhum registro encontrado para este filtro.</p>
+      <a href="{% url 'boloes:meus_jogos' %}" class="mt-4 inline-block bg-campo text-white px-6 py-3 rounded-xl font-bold hover:bg-campo-dark transition">Ver todos</a>
+    {% else %}
+      <p class="text-xl text-gray-500">Você ainda não participou de nenhum bolão.</p>
+      <a href="{% url 'boloes:bolao_list' %}" class="mt-4 inline-block bg-campo text-white px-6 py-3 rounded-xl font-bold hover:bg-campo-dark transition">Ver bolões disponíveis</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+<script>
+(function () {
+  const barra = document.getElementById('barra-pagamento');
+  const txtSel = document.getElementById('txt-selecionados');
+  const txtTotal = document.getElementById('txt-total');
+
+  function atualizar() {
+    const checks = document.querySelectorAll('.participacao-check:checked');
+    const total = Array.from(checks).reduce((s, c) => s + parseFloat(c.dataset.valor), 0);
+    if (checks.length > 0) {
+      barra.classList.remove('hidden');
+      txtSel.textContent = checks.length + ' bolão(ões) selecionado(s)';
+      txtTotal.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+    } else {
+      barra.classList.add('hidden');
+    }
+  }
+
+  window.toggleCard = function (card) {
+    const cb = card.querySelector('.participacao-check');
+    if (!cb) return;
+    cb.checked = !cb.checked;
+
+    const icon = card.querySelector('.check-icon');
+    const mark = card.querySelector('.check-mark');
+    if (cb.checked) {
+      icon.classList.add('bg-campo', 'border-campo');
+      icon.classList.remove('border-gray-300');
+      mark.classList.remove('hidden');
+      card.classList.add('ring-2', 'ring-campo');
+    } else {
+      icon.classList.remove('bg-campo', 'border-campo');
+      icon.classList.add('border-gray-300');
+      mark.classList.add('hidden');
+      card.classList.remove('ring-2', 'ring-campo');
+    }
+    atualizar();
+  };
+})();
+</script>
+{% endblock %}
+

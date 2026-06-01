@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Jogos — Bolão Copa{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-3xl font-extrabold text-campo">🗓️ Jogos</h1>
+  {% if user.is_staff %}
+    <a href="{% url 'jogos:jogo_create' %}" class="bg-campo text-white px-4 py-2 rounded-xl font-semibold hover:bg-campo-dark transition">+ Novo Jogo</a>
+  {% endif %}
+</div>
+
+{% if jogos %}
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for jogo in jogos %}
+    <div class="bg-white rounded-2xl shadow p-5 hover:shadow-md transition">
+      <div class="flex items-center justify-between text-center gap-2">
+        <div class="flex-1">
+          <p class="text-4xl">{{ jogo.selecao_mandante.icone|default:"🏴" }}</p>
+          <p class="font-bold">{{ jogo.selecao_mandante.sigla }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 mb-1">{{ jogo.data_hora|date:"d/m/Y H:i" }}</p>
+          <p class="text-2xl font-extrabold text-campo">
+            {% if jogo.resultado_definido %}{{ jogo.placar_mandante }} x {{ jogo.placar_visitante }}{% else %}x{% endif %}
+          </p>
+          <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block
+            {% if jogo.status == 'aberto' %}bg-green-100 text-green-800
+            {% elif jogo.status == 'encerrado' or jogo.status == 'resultado' %}bg-gray-100 text-gray-600
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ jogo.get_status_display }}
+          </span>
+        </div>
+        <div class="flex-1">
+          <p class="text-4xl">{{ jogo.selecao_visitante.icone|default:"🏴" }}</p>
+          <p class="font-bold">{{ jogo.selecao_visitante.sigla }}</p>
+        </div>
+      </div>
+      <div class="mt-3 flex justify-between items-center text-xs text-gray-500">
+        <span>{{ jogo.estadio }} — {{ jogo.cidade }}</span>
+        <div class="flex gap-2">
+          <a href="{% url 'jogos:jogo_detail' jogo.pk %}" class="text-campo underline">Ver</a>
+          {% if user.is_staff %}
+            <a href="{% url 'jogos:jogo_update' jogo.pk %}" class="text-ouro underline">Editar</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="text-gray-500 text-center py-12">Nenhum jogo cadastrado ainda. 🕐</p>
+{% endif %}
+{% endblock %}

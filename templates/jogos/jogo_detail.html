@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}{{ jogo }} — Bolão Copa{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-2xl shadow p-6 mb-6">
+    <div class="flex items-center justify-around text-center mb-4">
+      <div>
+        <p class="text-6xl">{{ jogo.selecao_mandante.icone|default:"🏴" }}</p>
+        <p class="font-extrabold text-xl mt-2">{{ jogo.selecao_mandante.nome }}</p>
+        <p class="text-gray-500 text-sm">{{ jogo.selecao_mandante.sigla }}</p>
+      </div>
+      <div class="px-4">
+        <p class="text-sm text-gray-500">{{ jogo.data_hora|date:"d/m/Y H:i" }}</p>
+        {% if jogo.resultado_definido %}
+          <p class="text-4xl font-extrabold text-campo my-2">{{ jogo.placar_mandante }} — {{ jogo.placar_visitante }}</p>
+        {% else %}
+          <p class="text-3xl font-extrabold text-campo my-2">X</p>
+        {% endif %}
+        <span class="text-xs px-3 py-1 rounded-full
+          {% if jogo.status == 'aberto' %}bg-green-100 text-green-800
+          {% elif jogo.status == 'encerrado' or jogo.status == 'resultado' %}bg-gray-100 text-gray-600
+          {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+          {{ jogo.get_status_display }}
+        </span>
+      </div>
+      <div>
+        <p class="text-6xl">{{ jogo.selecao_visitante.icone|default:"🏴" }}</p>
+        <p class="font-extrabold text-xl mt-2">{{ jogo.selecao_visitante.nome }}</p>
+        <p class="text-gray-500 text-sm">{{ jogo.selecao_visitante.sigla }}</p>
+      </div>
+    </div>
+    <div class="text-center text-sm text-gray-500 border-t pt-3">
+      <p>🏟️ {{ jogo.estadio }} — {{ jogo.cidade }}</p>
+      <p>Fase: {{ jogo.fase }}</p>
+    </div>
+  </div>
+
+  <!-- Bolões do jogo -->
+  {% if boloes %}
+  <h2 class="text-xl font-bold text-campo mb-3">🎯 Bolões disponíveis</h2>
+  <div class="space-y-3">
+    {% for bolao in boloes %}
+      <div class="bg-white rounded-xl shadow p-4 flex justify-between items-center">
+        <div>
+          <p class="font-bold">{{ bolao.nome }}</p>
+          <p class="text-sm text-gray-500">Valor: R$ {{ bolao.valor_participacao|floatformat:2 }}</p>
+        </div>
+        <a href="{% url 'boloes:bolao_detail' bolao.pk %}" class="bg-campo text-white px-4 py-2 rounded-xl font-semibold hover:bg-campo-dark transition text-sm">Participar</a>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="mt-4 flex gap-3">
+    <a href="{% url 'jogos:jogo_list' %}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-semibold hover:bg-gray-200 transition">← Voltar</a>
+    {% if user.is_staff %}
+      <a href="{% url 'jogos:jogo_update' jogo.pk %}" class="bg-ouro text-white px-4 py-2 rounded-xl font-semibold hover:bg-yellow-600 transition">✏️ Editar</a>
+      <a href="{% url 'jogos:jogo_delete' jogo.pk %}" class="bg-red-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-red-600 transition">🗑️ Excluir</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

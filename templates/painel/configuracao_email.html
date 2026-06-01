@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Configuração E-mail — Painel{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <h1 class="text-3xl font-extrabold text-campo mb-6">📧 Configuração de E-mail</h1>
+  <div class="bg-white rounded-2xl shadow p-6">
+    <p class="text-sm text-gray-500 mb-4">Configure o servidor SMTP para envio de e-mails de confirmação.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">{{ field.label }}</label>
+          {% render_field field class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-campo outline-none transition" %}
+          {% if field.errors %}{% for e in field.errors %}<p class="text-red-600 text-xs mt-1">{{ e }}</p>{% endfor %}{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="w-full bg-campo text-white py-3 rounded-xl font-bold hover:bg-campo-dark transition">💾 Salvar</button>
+    </form>
+  </div>
+  <a href="{% url 'painel:dashboard' %}" class="mt-4 inline-block text-campo underline text-sm">← Voltar ao painel</a>
+</div>
+{% endblock %}

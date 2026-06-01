@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Meu Perfil — Bolão Copa{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-3xl font-extrabold text-campo mb-6">👤 Meu Perfil</h1>
+
+  <div class="bg-white rounded-2xl shadow p-6 mb-6">
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <span class="font-semibold text-gray-500">Nome:</span>
+        <p class="font-bold text-lg">{{ user.nome_completo }}</p>
+      </div>
+      <div>
+        <span class="font-semibold text-gray-500">CPF:</span>
+        <p>{{ user.cpf }}</p>
+      </div>
+      <div>
+        <span class="font-semibold text-gray-500">E-mail:</span>
+        <p>{{ user.email }}</p>
+      </div>
+      <div>
+        <span class="font-semibold text-gray-500">Telefone:</span>
+        <p>{{ user.telefone }}</p>
+      </div>
+      <div>
+        <span class="font-semibold text-gray-500">Cadastro em:</span>
+        <p>{{ user.data_cadastro|date:"d/m/Y" }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dados Pix -->
+  <div class="bg-white rounded-2xl shadow p-6">
+    <h2 class="text-xl font-bold text-campo mb-4">💳 Dados Pix para recebimento</h2>
+    {% if pix %}
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div><span class="font-semibold text-gray-500">Tipo de chave:</span><p>{{ pix.get_tipo_chave_display }}</p></div>
+        <div><span class="font-semibold text-gray-500">Chave Pix:</span><p class="font-mono">{{ pix.chave_pix }}</p></div>
+        <div><span class="font-semibold text-gray-500">Recebedor:</span><p>{{ pix.nome_recebedor }}</p></div>
+        <div><span class="font-semibold text-gray-500">Banco:</span><p>{{ pix.banco }}</p></div>
+      </div>
+    {% else %}
+      <p class="text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+        ⚠️ Você ainda não cadastrou seus dados Pix. É necessário para receber prêmios.
+      </p>
+    {% endif %}
+    <a href="{% url 'usuarios:pix' %}" class="mt-4 inline-block bg-campo text-white px-5 py-2 rounded-xl font-semibold hover:bg-campo-dark transition">
+      ✏️ {% if pix %}Atualizar{% else %}Cadastrar{% endif %} Pix
+    </a>
+  </div>
+</div>
+{% endblock %}

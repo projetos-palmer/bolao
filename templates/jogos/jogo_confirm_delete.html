@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Excluir Jogo — Bolão Copa{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-12">
+  <div class="bg-white rounded-2xl shadow p-8 text-center">
+    <div class="text-5xl mb-4">⚠️</div>
+    <h1 class="text-2xl font-extrabold text-red-600 mb-2">Confirmar exclusão</h1>
+    <p class="text-gray-600 mb-6">Tem certeza que deseja excluir o jogo <strong>{{ object }}</strong>? Esta ação não pode ser desfeita.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="flex gap-3 justify-center">
+        <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-600 transition">🗑️ Sim, excluir</button>
+        <a href="{% url 'jogos:jogo_list' %}" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-xl font-bold hover:bg-gray-200 transition">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

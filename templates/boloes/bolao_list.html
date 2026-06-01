@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Bolões — Bolão Copa{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-3xl font-extrabold text-campo">🏆 Bolões</h1>
+  {% if user.is_staff %}
+    <a href="{% url 'boloes:bolao_create' %}" class="bg-campo text-white px-4 py-2 rounded-xl font-semibold hover:bg-campo-dark transition">+ Novo Bolão</a>
+  {% endif %}
+</div>
+
+{% if boloes %}
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for bolao in boloes %}
+    <div class="bg-white rounded-2xl shadow hover:shadow-md transition p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-3xl">🏆</span>
+        <div>
+          <p class="font-extrabold text-lg">{{ bolao.nome }}</p>
+          <span class="text-xs px-2 py-0.5 rounded-full
+            {% if bolao.status == 'aberto' %}bg-green-100 text-green-800
+            {% elif bolao.status == 'encerrado' or bolao.status == 'premiacao' %}bg-gray-100 text-gray-600
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ bolao.get_status_display }}
+          </span>
+        </div>
+      </div>
+      <div class="text-sm text-gray-600 space-y-1 mb-4">
+        <p>⚽ {{ bolao.jogo }}</p>
+        <p>💰 R$ {{ bolao.valor_participacao|floatformat:2 }} por palpite</p>
+        <p>🏅 {{ bolao.percentual_premiacao }}% em prêmios</p>
+        <p>📊 {{ bolao.participacoes_pagas }} participantes pagos</p>
+      </div>
+      <a href="{% url 'boloes:bolao_detail' bolao.pk %}" class="block text-center bg-campo text-white py-2 rounded-xl font-bold hover:bg-campo-dark transition text-sm">Ver detalhes</a>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="text-gray-500 text-center py-12">Nenhum bolão disponível no momento.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,191 @@
+========================================================
+  COMO FUNCIONA A CONFIRMAÇÃO DE PAGAMENTO NO BOLÃO
+========================================================
+
+
+--------------------------------------------------------
+VISÃO GERAL
+--------------------------------------------------------
+
+O sistema possui dois modos de confirmação de pagamento:
+
+  MODO 1 — Automático (com EFI Bank configurado)
+  MODO 2 — Manual (sem EFI Bank, você confirma um a um)
+
+Você pode usar qualquer um dos dois. O sistema detecta
+automaticamente qual modo está ativo.
+
+
+========================================================
+  MODO 1 — CONFIRMAÇÃO AUTOMÁTICA (EFI Bank)
+========================================================
+
+Quando você configura as credenciais do EFI Bank no painel,
+o sistema passa a funcionar assim:
+
+PASSO A PASSO:
+
+1. Usuário acessa o bolão e clica em "Participar"
+
+2. Sistema gera uma COBRANÇA PIX real via EFI Bank
+   (com QR Code e Pix Copia e Cola únicos para aquela participação)
+
+3. Usuário escaneia o QR Code ou usa o Copia e Cola e paga
+
+4. O EFI Bank detecta o pagamento e avisa o sistema
+   automaticamente via WEBHOOK (notificação em tempo real)
+
+5. O sistema recebe a notificação, localiza o pagamento
+   pelo ID da transação (txid) e confirma automaticamente
+
+6. A participação do usuário é liberada imediatamente
+
+7. A tela do usuário atualiza automaticamente em até 5 segundos
+   e redireciona para a página de confirmação — SEM ele
+   precisar fazer nada nem recarregar a página
+
+RESULTADO: você não precisa fazer nada. Pode ter 1 ou 1000
+participantes — todos são confirmados sozinhos.
+
+
+========================================================
+  MODO 2 — CONFIRMAÇÃO MANUAL (sem EFI Bank)
+========================================================
+
+Quando as credenciais EFI Bank NÃO estão configuradas,
+o sistema funciona assim:
+
+PASSO A PASSO:
+
+1. Usuário acessa o bolão e clica em "Participar"
+
+2. Sistema gera um QR Code estático (sem vínculo bancário)
+   com o valor e a chave PIX do administrador
+
+3. Usuário escaneia e paga normalmente
+
+4. O pagamento CAI NA SUA CONTA normalmente,
+   mas o sistema não sabe disso automaticamente
+
+5. VOCÊ precisa acessar o Painel > Dashboard
+
+6. No painel, aparece a lista de "Pagamentos pendentes"
+   com o nome do participante e o valor
+
+7. Você verifica no extrato do seu banco se o PIX
+   realmente chegou e clica em "Confirmar" no painel
+
+8. A participação do usuário é liberada
+
+OBS: O administrador também pode confirmar diretamente
+na tela de pagamento do usuário (botão verde [Admin]).
+
+
+========================================================
+  COMPARAÇÃO ENTRE OS MODOS
+========================================================
+
+  Recurso                  | Automático  | Manual
+  -------------------------|-------------|----------
+  Requer EFI Bank          | Sim         | Não
+  Confirma sozinho         | Sim         | Não
+  Você precisa agir        | Não         | Sim
+  Funciona para muita gente| Sim         | Trabalhoso
+  Custo por transação      | ~R$ 0,10    | Gratuito
+  QR Code dinâmico (real)  | Sim         | Não
+  QR Code estático (local) | Fallback*   | Sim
+
+  * Se o EFI Bank estiver configurado mas a API falhar,
+    o sistema gera QR estático automaticamente como fallback.
+
+
+========================================================
+  O QUE É O TXID (ID DA TRANSAÇÃO)?
+========================================================
+
+Cada participação gera um código único chamado TXID.
+Esse código é embutido no QR Code e no Pix Copia e Cola.
+
+Quando o pagamento é feito, o EFI Bank inclui esse txid
+na notificação enviada ao sistema, que o usa para
+identificar exatamente qual participação confirmar.
+
+Isso evita confusão quando várias pessoas pagam ao mesmo
+tempo ou quando o valor de duas participações é igual.
+
+
+========================================================
+  PÁGINA DE PAGAMENTO DO USUÁRIO
+========================================================
+
+Quando o usuário acessa a tela de pagamento, ele vê:
+
+- O valor a pagar em destaque
+- Um banner verde informando se a confirmação é automática
+- Um spinner "Aguardando pagamento..." enquanto está pendente
+- O QR Code para escanear
+- O Pix Copia e Cola (botão copiar)
+- A hora de expiração do código (5 minutos)
+- As instruções de pagamento
+
+Após pagar:
+- Se automático: a página redireciona sozinha em até 5 segundos
+- Se manual: o usuário vê a mensagem de aguardar confirmação
+
+
+========================================================
+  EXPIRAÇÃO DO CÓDIGO PIX
+========================================================
+
+Modo automático (EFI Bank): expira em 5 minutos
+Modo manual (QR estático):  expira em 3 minutos
+
+Após expirar:
+- O status da participação muda para "Expirado"
+- O usuário precisa fazer nova participação
+- Caso o bolão ainda esteja aberto, ele pode participar novamente
+
+
+========================================================
+  ONDE VER OS PAGAMENTOS NO PAINEL
+========================================================
+
+Acesse: Painel > Dashboard
+
+Você encontra:
+- Card "Pagamentos Pendentes" com a quantidade atual
+- Seção "Pagamentos pendentes" com a lista detalhada
+  (nome, bolão, valor e botão confirmar)
+- Seção "Bolões prontos para pagar ganhadores" após
+  o resultado ser lançado (para pagamento dos prêmios)
+
+
+========================================================
+  PARA ATIVAR A CONFIRMAÇÃO AUTOMÁTICA
+========================================================
+
+1. Crie conta no EFI Bank: https://efi.money
+   (escolha "Para negócios")
+
+2. Crie uma aplicação e gere o certificado .p12
+   (veja o arquivo COMO_CONFIGURAR_EFI_BANK.txt)
+
+3. Acesse: Painel > Configuração Pix
+
+4. Preencha:
+   - Client ID
+   - Client Secret
+   - Certificado (.p12)
+   - Ambiente: Homologação (testes) ou Produção (real)
+
+5. Clique em "Salvar"
+
+6. Clique em "Registrar webhook agora"
+
+Pronto. A partir daí, todos os pagamentos são
+confirmados automaticamente sem nenhuma ação sua.
+
+
+========================================================
+  Arquivo gerado pelo sistema de Bolão Copa do Mundo
+========================================================

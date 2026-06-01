@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}Pagar com Pix — {{ lote.pagamentos.count }} bolão(ões) — Bolão Copa{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <div class="bg-white rounded-2xl shadow overflow-hidden">
+    <div class="bg-campo px-6 py-5 text-center">
+      <h1 class="text-2xl font-extrabold text-white">💳 Pagar com Pix</h1>
+      <p class="text-green-200 text-sm mt-1">{{ lote.pagamentos.count }} bolão(ões) selecionado(s)</p>
+    </div>
+
+    <div class="p-6">
+      <!-- Valor destaque -->
+      <div class="text-center mb-5">
+        <p class="text-gray-500 text-sm">Valor total a pagar</p>
+        <p class="text-5xl font-extrabold text-campo">R$ {{ lote.valor_total|floatformat:2 }}</p>
+      </div>
+
+      <!-- Resumo dos bolões incluídos -->
+      <div class="bg-gray-50 rounded-xl p-4 mb-5">
+        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Bolões incluídos neste pagamento</p>
+        <ul class="space-y-2">
+          {% for p in participacoes %}
+          <li class="flex justify-between items-center text-sm">
+            <span class="font-medium text-gray-800">
+              {{ p.bolao.jogo.selecao_mandante.icone|default:"🏴" }} {{ p.placar_mandante }} x {{ p.placar_visitante }} {{ p.bolao.jogo.selecao_visitante.icone|default:"🏴" }}
+              <span class="text-gray-500 ml-1">{{ p.bolao.nome }}</span>
+            </span>
+            <span class="font-bold text-campo">R$ {{ p.bolao.valor_participacao|floatformat:2 }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="border-t border-gray-200 mt-2 pt-2 flex justify-between text-sm font-bold">
+          <span>Total</span>
+          <span class="text-campo">R$ {{ lote.valor_total|floatformat:2 }}</span>
+        </div>
+      </div>
+
+      <!-- Banner de confirmação automática -->
+      {% if confirmacao_automatica %}
+      <div class="bg-green-50 border border-green-300 rounded-xl p-3 mb-5 flex items-center gap-2 text-green-800 text-sm">
+        <span class="text-lg">⚡</span>
+        <span><strong>Confirmação automática ativa.</strong> Todos os bolões serão liberados automaticamente quando o Pix for recebido.</span>
+      </div>
+      {% endif %}
+
+      <!-- Spinner aguardando -->
+      {% if lote.status == 'pendente' %}
+      <div id="aguardando-pix" class="flex items-center justify-center gap-2 text-sm text-gray-500 mb-4">
+        <svg class="animate-spin h-4 w-4 text-campo" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        <span>Aguardando pagamento…</span>
+      </div>
+      {% endif %}
+
+      <!-- QR Code -->
+      {% if lote.qr_code %}
+      <div class="flex flex-col items-center mb-6">
+        <p class="text-sm text-gray-600 mb-3">Escaneie o QR Code pelo app do seu banco:</p>
+        <img src="data:image/png;base64,{{ lote.qr_code }}" alt="QR Code Pix" class="w-52 h-52 rounded-xl shadow border-2 border-gray-200" />
+      </div>
+      {% endif %}
+
+      <!-- Copia e Cola -->
+      {% if lote.pix_copia_cola %}
+      <div class="mb-5">
+        <p class="text-sm font-semibold text-gray-700 mb-2">Ou use Pix Copia e Cola:</p>
+        <div class="flex gap-2">
+          <input id="pix-cc" type="text" value="{{ lote.pix_copia_cola }}" readonly
+            class="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-xs font-mono bg-gray-50 select-all" />
+          <button onclick="copiarPix()" class="bg-campo text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-campo-dark transition">
+            📋 Copiar
+          </button>
+        </div>
+        <p id="copiado" class="text-green-600 text-xs mt-1 hidden">✅ Copiado!</p>
+      </div>
+      {% endif %}
+
+      <!-- Validade -->
+      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4 text-sm text-yellow-800">
+        ⏰ Este código expira em <strong>{{ lote.data_expiracao|date:"H:i" }}</strong>.
+        {% if confirmacao_automatica %}
+          Após o pagamento, todos os bolões são confirmados automaticamente.
+        {% else %}
+          Após o pagamento, aguarde a confirmação do administrador.
+        {% endif %}
+      </div>
+
+      <!-- Instruções -->
+      <ol class="text-sm text-gray-600 list-decimal list-inside space-y-1 mb-5">
+        <li>Abra o app do seu banco e acesse o Pix</li>
+        <li>Escolha "Pix Copia e Cola" ou escaneie o QR Code</li>
+        <li>Confirme o valor de <strong>R$ {{ lote.valor_total|floatformat:2 }}</strong></li>
+        <li>Pronto! Todos os {{ lote.pagamentos.count }} bolão(ões) serão confirmados</li>
+      </ol>
+
+      <a href="{% url 'boloes:meus_jogos' %}" class="block text-center text-sm text-gray-400 hover:text-campo underline">← Voltar para Meus Jogos</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function copiarPix() {
+  const el = document.getElementById('pix-cc');
+  el.select();
+  document.execCommand('copy');
+  document.getElementById('copiado').classList.remove('hidden');
+  setTimeout(() => document.getElementById('copiado').classList.add('hidden'), 2500);
+}
+
+{% if lote.status == 'pendente' %}
+const urlStatus = "{% url 'pagamentos:status_lote' lote.pk %}";
+function verificar() {
+  fetch(urlStatus)
+    .then(r => r.json())
+    .then(data => {
+      if (data.confirmado && data.url_confirmado) {
+        window.location.href = data.url_confirmado;
+      } else if (data.expirado) {
+        window.location.href = "{% url 'boloes:meus_jogos' %}";
+      }
+    });
+}
+setInterval(verificar, 5000);
+{% endif %}
+</script>
+{% endblock %}
