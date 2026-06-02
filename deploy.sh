@@ -179,7 +179,11 @@ info "Rodando migrations..."
 sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" "${APP_DIR}/manage.py" migrate --noinput
 
 info "Coletando arquivos estáticos..."
-sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" "${APP_DIR}/manage.py" collectstatic --noinput
+sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" "${APP_DIR}/manage.py" collectstatic --noinput --clear
+
+info "Ajustando permissões dos arquivos estáticos..."
+chmod -R 755 "${APP_DIR}/staticfiles/"
+chmod 755 "/home/${APP_USER}/"
 
 # ---------------------------------------------------------------------------
 # 7. Configurar Gunicorn como serviço systemd

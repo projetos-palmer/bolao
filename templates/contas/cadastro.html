@@ -1,8 +1,57 @@
 {% extends 'base.html' %}
 {% load widget_tweaks %}
 {% block title %}Criar Conta — Bolão Copa{% endblock %}
+
+{% block extra_head %}
+<style>
+  .float-item {
+    position: fixed;
+    font-size: 1.6rem;
+    opacity: 0;
+    animation: floatDrift var(--dur, 9s) ease-in var(--delay, 0s) infinite;
+    pointer-events: none;
+    user-select: none;
+  }
+  @keyframes floatDrift {
+    0%   { transform: translate(0, 110vh) rotate(0deg) scale(0.7); opacity: 0; }
+    10%  { opacity: 0.85; }
+    50%  { transform: translate(var(--dx, 20px), 50vh) rotate(180deg) scale(1); }
+    100% { transform: translate(calc(var(--dx, 20px)*2), -10vh) rotate(360deg) scale(0.8); opacity: 0; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-lg mx-auto mt-8">
+
+<!-- Partículas flutuantes -->
+<div class="float-item" style="left:4%;  --dur:8s;  --delay:0s;   --dx:20px">⚽</div>
+<div class="float-item" style="left:12%; --dur:10s; --delay:2s;   --dx:-15px">⚽</div>
+<div class="float-item" style="left:82%; --dur:9s;  --delay:1s;   --dx:18px">⚽</div>
+<div class="float-item" style="left:91%; --dur:11s; --delay:3s;   --dx:-20px">⚽</div>
+<div class="float-item" style="left:48%; --dur:13s; --delay:5s;   --dx:12px">⚽</div>
+
+<div class="float-item" style="left:20%; --dur:12s; --delay:1.5s; --dx:-18px; font-size:1.8rem">🏆</div>
+<div class="float-item" style="left:75%; --dur:10s; --delay:4s;   --dx:15px;  font-size:1.8rem">🏆</div>
+
+<div class="float-item" style="left:2%;  --dur:14s; --delay:0.5s; --dx:12px;  font-size:1.6rem">🇧🇷</div>
+<div class="float-item" style="left:10%; --dur:11s; --delay:6s;   --dx:-10px; font-size:1.6rem">🇦🇷</div>
+<div class="float-item" style="left:18%; --dur:13s; --delay:3s;   --dx:16px;  font-size:1.6rem">🇫🇷</div>
+<div class="float-item" style="left:30%; --dur:9s;  --delay:7s;   --dx:-12px; font-size:1.6rem">🇩🇪</div>
+<div class="float-item" style="left:62%; --dur:15s; --delay:0.5s; --dx:20px;  font-size:1.6rem">🇪🇸</div>
+<div class="float-item" style="left:70%; --dur:10s; --delay:4.5s; --dx:-15px; font-size:1.6rem">🇵🇹</div>
+<div class="float-item" style="left:80%; --dur:12s; --delay:2s;   --dx:12px;  font-size:1.6rem">🇺🇸</div>
+<div class="float-item" style="left:88%; --dur:8s;  --delay:5s;   --dx:-18px; font-size:1.6rem">🇲🇽</div>
+<div class="float-item" style="left:55%; --dur:11s; --delay:1s;   --dx:-12px; font-size:1.6rem">🇮🇹</div>
+<div class="float-item" style="left:40%; --dur:16s; --delay:8s;   --dx:10px;  font-size:1.6rem">🏴󠁧󠁢󠁥󠁮󠁧󠁿</div>
+
+<div class="float-item" style="left:7%;  --dur:6s;  --delay:0.3s; --dx:10px;  font-size:1.3rem">⭐</div>
+<div class="float-item" style="left:17%; --dur:7s;  --delay:2.2s; --dx:-10px; font-size:1.3rem">🌟</div>
+<div class="float-item" style="left:38%; --dur:8s;  --delay:4.5s; --dx:14px;  font-size:1.3rem">✨</div>
+<div class="float-item" style="left:63%; --dur:9s;  --delay:1.8s; --dx:-10px; font-size:1.3rem">🎉</div>
+<div class="float-item" style="left:77%; --dur:7s;  --delay:3.5s; --dx:12px;  font-size:1.3rem">🎊</div>
+<div class="float-item" style="left:93%; --dur:10s; --delay:6s;   --dx:-8px;  font-size:1.3rem">⭐</div>
+
+<div class="max-w-lg mx-auto mt-8 relative z-10">
   <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
     <div class="bg-campo px-8 py-6 text-center">
       <div class="text-5xl mb-2">🏆</div>
@@ -29,9 +78,6 @@
             {% endif %}
           </div>
         {% endfor %}
-        <div class="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 text-sm text-green-800">
-          📧 Após o cadastro, você receberá um e-mail para confirmar sua conta e criar sua senha.
-        </div>
         <button type="submit" class="w-full bg-campo text-white py-3 rounded-xl font-bold text-lg hover:bg-campo-dark transition shadow">
           🏆 Criar minha conta
         </button>
