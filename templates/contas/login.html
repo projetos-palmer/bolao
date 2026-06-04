@@ -182,6 +182,9 @@
         {% endfor %}
       {% endif %}
 
+      <div class="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-5 text-sm text-blue-800">
+        <strong>Login somente com CPF</strong>
+      </div>
       <form method="post" novalidate>
         {% csrf_token %}
         {% for field in form %}
@@ -230,6 +233,20 @@
       <p class="text-xs text-gray-400">🏆 Aposte, acerte e ganhe prêmios! 🏆</p>
     </div>
   </div>
+
+
+<script>
+  const cpfLogin = document.getElementById('id_cpf');
+  if (cpfLogin) {
+    cpfLogin.addEventListener('input', function (e) {
+      let v = e.target.value.replace(/\D/g, '').slice(0, 11);
+      if (v.length > 9)      v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+      else if (v.length > 6) v = v.replace(/^(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3');
+      else if (v.length > 3) v = v.replace(/^(\d{3})(\d{0,3})/, '$1.$2');
+      e.target.value = v;
+    });
+  }
+</script>
 
 </body>
 </html>

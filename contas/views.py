@@ -94,7 +94,7 @@ class CriarSenhaView(View):
 
 
 class LoginUsuarioView(View):
-    """Login por e-mail ou CPF."""
+    """Login exclusivamente por CPF."""
 
     template_name = 'contas/login.html'
 
@@ -109,20 +109,10 @@ class LoginUsuarioView(View):
     def post(self, request):
         form = FormLoginUsuario(request.POST)
         if form.is_valid():
-            identificador = form.cleaned_data['identificador'].strip()
+            cpf = form.cleaned_data['cpf']
             senha = form.cleaned_data['senha']
 
-            # Tenta por e-mail
-            email = identificador if '@' in identificador else None
-            if not email:
-                # Tenta localizar pelo CPF
-                try:
-                    usuario_obj = Usuario.objects.get(cpf=identificador)
-                    email = usuario_obj.email
-                except Usuario.DoesNotExist:
-                    email = None
-
-            usuario = authenticate(request, username=email, password=senha) if email else None
+            usuario = authenticate(request, username=cpf, password=senha)
 
             if usuario:
                 if not usuario.email_confirmado:
@@ -136,9 +126,8 @@ class LoginUsuarioView(View):
                     return redirect('painel:dashboard')
                 return redirect('jogos:inicio')
 
-            messages.error(request, 'Credenciais inválidas. Verifique seu e-mail/CPF e senha.')
+            messages.error(request, 'Credenciais inválidas. Verifique seu CPF e senha.')
         return render(request, self.template_name, {'form': form})
-
 
 class LogoutUsuarioView(View):
     """Encerra a sessão do usuário."""

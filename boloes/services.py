@@ -73,20 +73,28 @@ def verificar_boloes_para_fechar():
 
 def pagar_premios_bolao(bolao: Bolao) -> dict:
     """
-    Envia automaticamente o prêmio PIX para cada ganhador do bolão.
-    Requer que as credenciais EFI Bank estejam configuradas.
+    Paga ou registra o pagamento dos premios dos ganhadores.
+
+    - EFI Bank configurado: envia PIX automaticamente via API EFI.
+    - Apenas Mercado Pago configurado: registra pagamento manual feito pelo
+      administrador no app/conta Mercado Pago.
 
     Retorna um dict com:
-      - pagos: lista de dicts dos prêmios pagos com sucesso
-      - falhos: lista de dicts dos prêmios que falharam
+      - modo: efi_automatico ou mercado_pago_manual
+      - pagos: lista de dicts dos premios pagos/registrados com sucesso
+      - falhos: lista de dicts dos premios que falharam
       - sem_pix: lista de ganhadores sem chave PIX cadastrada
     """
     from pagamentos.models import ConfiguracaoPixAdministrador
     from pagamentos.pix import enviar_premio_pix, tem_credenciais_efi
+    from pagamentos.pix_mp import tem_credenciais_mp
 
     config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
-    if not config_pix or not tem_credenciais_efi(config_pix):
-        raise ValueError('Credenciais EFI Bank não configuradas. Configure em Painel → Configuração Pix.')
+    usar_efi = tem_credenciais_efi(config_pix) if config_pix else False
+    usar_mp_manual = tem_credenciais_mp(config_pix) if config_pix else False
+
+    if not usar_efi and not usar_mp_manual:
+        raise ValueError('Configure Mercado Pago ou EFI Bank em Painel > Configuracao Pix.')
 
     premios_pendentes = Premio.objects.filter(
         bolao=bolao,
@@ -105,6 +113,26 @@ def pagar_premios_bolao(bolao: Bolao) -> dict:
             sem_pix.append({'usuario': usuario.nome_completo, 'valor': float(premio.valor)})
             continue
 
+        if usar_mp_manual:
+            premio.status_pagamento = 'pago'
+            premio.data_pagamento = timezone.now()
+            premio.comprovante = (
+                'Pagamento manual via Mercado Pago confirmado pelo administrador. '
+                f'Chave PIX: {pix_usuario.chave_pix}; Valor: R$ {premio.valor}'
+            )
+            premio.save(update_fields=['status_pagamento', 'data_pagamento', 'comprovante'])
+
+            premio.participacao.status = 'premio_pago'
+            premio.participacao.save(update_fields=['status'])
+
+            pagos.append({'usuario': usuario.nome_completo, 'valor': float(premio.valor)})
+            logger.info(
+                'Premio PIX registrado manualmente via Mercado Pago: usuario=%s valor=%s',
+                usuario.nome_completo,
+                premio.valor,
+            )
+            continue
+
         id_envio = str(uuid.uuid4()).replace('-', '')[:35]
         descricao = f'Premio Bolao {bolao.nome}'[:140]
 
@@ -117,7 +145,6 @@ def pagar_premios_bolao(bolao: Bolao) -> dict:
                 descricao=descricao,
             )
 
-            # A API EFI retorna erro se houver campo 'codigo' ou ausência de 'idEnvio'
             if isinstance(resposta, dict) and resposta.get('idEnvio'):
                 premio.status_pagamento = 'pago'
                 premio.data_pagamento = timezone.now()
@@ -143,10 +170,10 @@ def pagar_premios_bolao(bolao: Bolao) -> dict:
             falhos.append({'usuario': usuario.nome_completo, 'valor': float(premio.valor), 'erro': str(exc)})
             logger.exception('Erro ao enviar premio PIX para %s', usuario.nome_completo)
 
-    # Se todos foram pagos (nenhum pendente restante), fecha o bolão como pago
     ainda_pendentes = Premio.objects.filter(bolao=bolao, status_pagamento='pendente').exists()
     if not ainda_pendentes and (pagos or not falhos):
         bolao.status = 'pago'
         bolao.save(update_fields=['status'])
 
-    return {'pagos': pagos, 'falhos': falhos, 'sem_pix': sem_pix}
+    modo = 'efi_automatico' if usar_efi else 'mercado_pago_manual'
+    return {'modo': modo, 'pagos': pagos, 'falhos': falhos, 'sem_pix': sem_pix}

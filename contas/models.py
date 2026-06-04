@@ -4,15 +4,15 @@ from django.db import models
 
 class UsuarioManager(BaseUserManager):
 
-    def create_user(self, email, cpf, nome_completo, telefone, password=None):
-        if not email:
-            raise ValueError('O e-mail é obrigatório.')
+    def create_user(self, cpf, email, nome_completo, telefone, password=None):
         if not cpf:
             raise ValueError('O CPF é obrigatório.')
+        if not email:
+            raise ValueError('O e-mail é obrigatório.')
         email = self.normalize_email(email)
         usuario = self.model(
-            email=email,
             cpf=cpf,
+            email=email,
             nome_completo=nome_completo,
             telefone=telefone,
         )
@@ -21,15 +21,14 @@ class UsuarioManager(BaseUserManager):
         usuario.save(using=self._db)
         return usuario
 
-    def create_superuser(self, email, cpf, nome_completo, telefone, password=None):
-        usuario = self.create_user(email, cpf, nome_completo, telefone, password)
+    def create_superuser(self, cpf, email, nome_completo, telefone, password=None):
+        usuario = self.create_user(cpf, email, nome_completo, telefone, password)
         usuario.is_staff = True
         usuario.is_superuser = True
         usuario.is_active = True
         usuario.email_confirmado = True
         usuario.save(using=self._db)
         return usuario
-
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
     cpf = models.CharField('CPF', max_length=14, unique=True)
@@ -43,8 +42,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     objects = UsuarioManager()
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['cpf', 'nome_completo', 'telefone']
+    USERNAME_FIELD = 'cpf'
+    REQUIRED_FIELDS = ['email', 'nome_completo', 'telefone']
 
     class Meta:
         verbose_name = 'Usuário'

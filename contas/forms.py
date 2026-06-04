@@ -60,26 +60,17 @@ class FormCadastroUsuario(forms.ModelForm):
 
 
 class FormCriarSenha(forms.Form):
-    """Formulário para criação de senha após confirmação de e-mail."""
+    """Formulário para criação de senha após cadastro."""
     senha = forms.CharField(
         label='Senha',
-        widget=forms.PasswordInput(attrs={'placeholder': 'Crie uma senha forte'}),
-        min_length=6,
+        widget=forms.PasswordInput(attrs={'placeholder': 'Crie uma senha com mais de 4 caracteres'}),
+        min_length=5,
+        error_messages={'min_length': 'A senha deve ter mais de 4 caracteres.'},
     )
     confirmar_senha = forms.CharField(
         label='Confirmar senha',
         widget=forms.PasswordInput(attrs={'placeholder': 'Repita a senha'}),
     )
-
-    def clean_senha(self):
-        senha = self.cleaned_data.get('senha', '')
-        if not re.search(r'[A-Z]', senha):
-            raise forms.ValidationError('A senha deve ter pelo menos uma letra maiúscula.')
-        if not re.search(r'[a-z]', senha):
-            raise forms.ValidationError('A senha deve ter pelo menos uma letra minúscula.')
-        if not re.search(r'\d', senha):
-            raise forms.ValidationError('A senha deve ter pelo menos um número.')
-        return senha
 
     def clean(self):
         dados = super().clean()
@@ -89,14 +80,26 @@ class FormCriarSenha(forms.Form):
             raise forms.ValidationError('As senhas não coincidem.')
         return dados
 
-
 class FormLoginUsuario(forms.Form):
-    """Formulário de login com e-mail ou CPF."""
-    identificador = forms.CharField(
-        label='E-mail ou CPF',
-        widget=forms.TextInput(attrs={'placeholder': 'seu@email.com ou 000.000.000-00'}),
+    """Formulario de login exclusivamente por CPF."""
+    cpf = forms.CharField(
+        label='CPF',
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Digite seu CPF: 000.000.000-00',
+            'maxlength': '14',
+            'autocomplete': 'username',
+        }),
     )
     senha = forms.CharField(
         label='Senha',
-        widget=forms.PasswordInput(attrs={'placeholder': 'Sua senha'}),
+        widget=forms.PasswordInput(attrs={'placeholder': 'Sua senha', 'autocomplete': 'current-password'}),
     )
+
+    def clean_cpf(self):
+        cpf = self.cleaned_data.get('cpf', '').strip()
+        numeros = re.sub(r'\D', '', cpf)
+        if len(numeros) == 11:
+            cpf = f'{numeros[:3]}.{numeros[3:6]}.{numeros[6:9]}-{numeros[9:]}'
+        if not cpf_validator.validate(cpf):
+            raise forms.ValidationError('CPF inválido. Informe o CPF usado no cadastro.')
+        return cpf

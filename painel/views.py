@@ -9,6 +9,8 @@ from boloes.models import Bolao, ParticipacaoBolao, Premio
 from boloes.services import pagar_premios_bolao
 from jogos.models import Jogo
 from pagamentos.models import Pagamento, ConfiguracaoPixAdministrador, ConfiguracaoEmail
+from pagamentos.pix import tem_credenciais_efi
+from pagamentos.pix_mp import tem_credenciais_mp
 from contas.models import Usuario
 
 
@@ -47,7 +49,17 @@ class DashboardAdministradorView(AdminMixin, TemplateView):
         ).order_by('-id')[:5]
         ctx['boloes_em_premiacao'] = Bolao.objects.filter(
             status='premiacao'
-        ).select_related('jogo__selecao_mandante', 'jogo__selecao_visitante').prefetch_related('premios')
+        ).select_related(
+            'jogo__selecao_mandante',
+            'jogo__selecao_visitante',
+        ).prefetch_related(
+            'premios__usuario__pix',
+        )
+        config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
+        ctx['premios_via_efi'] = tem_credenciais_efi(config_pix) if config_pix else False
+        ctx['premios_via_mp_manual'] = (
+            tem_credenciais_mp(config_pix) and not ctx['premios_via_efi']
+        ) if config_pix else False
         return ctx
 
 
@@ -126,7 +138,12 @@ class PagarPremiosBolaoView(AdminMixin, View):
         falhos = resultado['falhos']
         sem_pix = resultado['sem_pix']
 
-        if pagos:
+        modo = resultado.get('modo')
+
+        if pagos and modo == 'mercado_pago_manual':
+            nomes = ', '.join(p['usuario'] for p in pagos)
+            messages.success(request, f'Pagamento manual via Mercado Pago registrado para {len(pagos)} ganhador(es): {nomes}.')
+        elif pagos:
             nomes = ', '.join(p['usuario'] for p in pagos)
             messages.success(request, f'PIX enviado com sucesso para {len(pagos)} ganhador(es): {nomes}.')
 

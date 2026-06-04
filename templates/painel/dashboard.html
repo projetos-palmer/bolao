@@ -93,7 +93,11 @@
 {% if boloes_em_premiacao %}
 <div class="bg-white rounded-2xl shadow p-5 mt-6 border-2 border-ouro">
   <h2 class="font-extrabold text-ouro mb-1">🏅 Bolões prontos para pagar ganhadores</h2>
+  {% if premios_via_mp_manual %}
+  <p class="text-xs text-gray-500 mb-4">Os ganhadores foram calculados. Pague cada chave Pix pela sua conta Mercado Pago e depois clique para registrar os prêmios como pagos.</p>
+  {% else %}
   <p class="text-xs text-gray-500 mb-4">Os ganhadores foram calculados. Clique em "Pagar via PIX" para enviar o prêmio automaticamente para cada ganhador.</p>
+  {% endif %}
   <div class="space-y-3">
     {% for b in boloes_em_premiacao %}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
@@ -114,12 +118,58 @@
         </p>
         {% endfor %}
       </div>
+      {% if premios_via_mp_manual %}
+      <div class="w-full overflow-x-auto bg-white/80 border border-yellow-200 rounded-xl">
+        <div class="px-4 py-3 border-b border-yellow-100">
+          <p class="font-bold text-gray-700 text-sm">Dados Pix dos ganhadores</p>
+          <p class="text-xs text-gray-500">Use estes dados para pagar manualmente pela sua conta Mercado Pago.</p>
+        </div>
+        <table class="w-full text-xs">
+          <thead class="bg-yellow-100/70 text-gray-600">
+            <tr>
+              <th class="text-left px-4 py-2">Ganhador</th>
+              <th class="text-left px-4 py-2">Valor</th>
+              <th class="text-left px-4 py-2">Tipo Pix</th>
+              <th class="text-left px-4 py-2">Chave Pix</th>
+              <th class="text-left px-4 py-2">Recebedor</th>
+              <th class="text-left px-4 py-2">Banco</th>
+              <th class="text-left px-4 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for premio in b.premios.all %}
+            <tr class="border-t border-yellow-100">
+              <td class="px-4 py-2 font-semibold text-gray-700">{{ premio.usuario.nome_completo }}</td>
+              <td class="px-4 py-2 font-bold text-campo">R$ {{ premio.valor|floatformat:2 }}</td>
+              {% if premio.usuario.pix %}
+              <td class="px-4 py-2">{{ premio.usuario.pix.get_tipo_chave_display }}</td>
+              <td class="px-4 py-2 font-mono">{{ premio.usuario.pix.chave_pix }}</td>
+              <td class="px-4 py-2">{{ premio.usuario.pix.nome_recebedor }}</td>
+              <td class="px-4 py-2">{{ premio.usuario.pix.banco }}</td>
+              {% else %}
+              <td class="px-4 py-2 text-red-600" colspan="4">Pix não cadastrado</td>
+              {% endif %}
+              <td class="px-4 py-2">{{ premio.get_status_pagamento_display }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
       <form method="post" action="{% url 'painel:pagar_premios_bolao' b.pk %}"
-            onsubmit="return confirm('Enviar PIX automático para todos os ganhadores de {{ b.nome }}?')">
+            {% if premios_via_mp_manual %}
+            onsubmit="return confirm('Confirma que você JÁ PAGOU manualmente os ganhadores de {{ b.nome }} pela sua conta Mercado Pago? Esta ação apenas registra como pago no sistema.')"
+            {% else %}
+            onsubmit="return confirm('Enviar PIX automático para todos os ganhadores de {{ b.nome }}?')"
+            {% endif %}>
         {% csrf_token %}
         <button type="submit"
           class="whitespace-nowrap bg-ouro text-white px-5 py-2 rounded-xl font-bold hover:bg-yellow-600 transition text-sm">
-          💸 Pagar via PIX
+          {% if premios_via_mp_manual %}
+          Registrar pagamento
+          {% else %}
+          Pagar via PIX
+          {% endif %}
         </button>
       </form>
     </div>
