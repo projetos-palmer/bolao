@@ -23,7 +23,7 @@ from django.conf.urls.static import static
 handler404 = 'bolao.views.pagina_404'
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('babu/', admin.site.urls),
     path('', RedirectView.as_view(url='/jogos/', permanent=False)),
     path('contas/', include('contas.urls')),
     path('usuarios/', include('usuarios.urls')),
