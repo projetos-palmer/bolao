@@ -14,9 +14,13 @@ from django.utils.decorators import method_decorator
 from boloes.models import ParticipacaoBolao
 from .models import Pagamento, PagamentoLote, ConfiguracaoPixAdministrador
 from .pix import criar_pagamento, criar_pagamento_lote, registrar_webhook_efi, tem_credenciais_efi
-from .pix_mp import tem_credenciais_mp, verificar_pagamento_mp
+from .pix_mp import MercadoPagoError, tem_credenciais_mp, verificar_pagamento_mp
 
 logger = logging.getLogger(__name__)
+
+
+def _pagamento_foi_criado_no_mp(pagamento):
+    return bool(pagamento.txid and pagamento.txid.isdigit())
 
 
 class AdminMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -38,12 +42,23 @@ class PagamentoPixDetailView(LoginRequiredMixin, View):
 
         # Cria ou recupera pagamento
         pagamento = Pagamento.objects.filter(participacao=participacao).first()
+        config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
+        if not config_pix:
+            messages.error(request, 'Chave Pix do administrador nao configurada. Contate o suporte.')
+            return redirect('boloes:meus_jogos')
+
+        if pagamento and pagamento.status == 'pendente' and tem_credenciais_mp(config_pix) and not _pagamento_foi_criado_no_mp(pagamento):
+            logger.warning('Removendo PIX estatico pendente para recriar no Mercado Pago: pagamento=%s txid=%s', pagamento.pk, pagamento.txid)
+            pagamento.delete()
+            pagamento = None
+
         if not pagamento:
-            config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
-            if not config_pix:
-                messages.error(request, 'Chave Pix do administrador não configurada. Contate o suporte.')
+            try:
+                pagamento = criar_pagamento(participacao, config_pix)
+            except MercadoPagoError as exc:
+                logger.exception('Falha ao criar cobranca Mercado Pago para participacao %s', participacao.pk)
+                messages.error(request, f'Erro ao gerar PIX pelo Mercado Pago: {exc}')
                 return redirect('boloes:meus_jogos')
-            pagamento = criar_pagamento(participacao, config_pix)
 
         # Verifica expiração
         if pagamento.esta_expirado:
@@ -54,7 +69,6 @@ class PagamentoPixDetailView(LoginRequiredMixin, View):
             messages.warning(request, 'O prazo de 3 minutos para pagamento expirou. Faça uma nova participação se o bolão ainda estiver aberto.')
             return redirect('boloes:bolao_detail', pk=participacao.bolao.pk)
 
-        config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
         confirmacao_automatica = (
             (tem_credenciais_mp(config_pix) or tem_credenciais_efi(config_pix))
             if config_pix else False
@@ -230,7 +244,12 @@ class PagamentoLoteCreateView(LoginRequiredMixin, View):
             messages.error(request, 'Chave Pix do administrador não configurada. Contate o suporte.')
             return redirect('boloes:meus_jogos')
 
-        lote = criar_pagamento_lote(participacoes, config_pix, request.user)
+        try:
+            lote = criar_pagamento_lote(participacoes, config_pix, request.user)
+        except MercadoPagoError as exc:
+            logger.exception('Falha ao criar cobranca Mercado Pago em lote para usuario %s', request.user.pk)
+            messages.error(request, f'Erro ao gerar PIX pelo Mercado Pago: {exc}')
+            return redirect('boloes:meus_jogos')
         return redirect('pagamentos:pagamento_lote', pk=lote.pk)
 
 
@@ -241,6 +260,20 @@ class PagamentoLoteDetailView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         lote = get_object_or_404(PagamentoLote, pk=pk, usuario=request.user)
+        config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
+
+        if lote.status == 'pendente' and tem_credenciais_mp(config_pix) and not _pagamento_foi_criado_no_mp(lote):
+            logger.warning('Removendo PIX estatico pendente de lote para recriar no Mercado Pago: lote=%s txid=%s', lote.pk, lote.txid)
+            participacoes = list(ParticipacaoBolao.objects.filter(pagamento__lote=lote).select_related('bolao'))
+            lote.pagamentos.all().delete()
+            lote.delete()
+            try:
+                novo_lote = criar_pagamento_lote(participacoes, config_pix, request.user)
+            except MercadoPagoError as exc:
+                logger.exception('Falha ao recriar cobranca Mercado Pago em lote %s', pk)
+                messages.error(request, f'Erro ao gerar PIX pelo Mercado Pago: {exc}')
+                return redirect('boloes:meus_jogos')
+            return redirect('pagamentos:pagamento_lote', pk=novo_lote.pk)
 
         if lote.esta_expirado and lote.status == 'pendente':
             lote.status = 'expirado'
@@ -250,7 +283,6 @@ class PagamentoLoteDetailView(LoginRequiredMixin, View):
             messages.warning(request, 'O prazo de pagamento expirou. Faça novas apostas se os bolões ainda estiverem abertos.')
             return redirect('boloes:meus_jogos')
 
-        config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
         confirmacao_automatica = (
             (tem_credenciais_mp(config_pix) or tem_credenciais_efi(config_pix))
             if config_pix else False

@@ -7,9 +7,13 @@ from datetime import datetime, timedelta
 import mercadopago
 
 
+class MercadoPagoError(Exception):
+    """Erro ao criar ou consultar pagamento no Mercado Pago."""
+
+
 def tem_credenciais_mp(config_pix) -> bool:
     """Retorna True se o Access Token do Mercado Pago estiver configurado."""
-    return bool(config_pix.mp_access_token)
+    return bool(config_pix and config_pix.mp_access_token and config_pix.mp_access_token.strip())
 
 
 def _get_sdk(config_pix):
@@ -51,17 +55,22 @@ def criar_cobranca_mp(config_pix, valor: float, email_pagador: str, external_ref
     result = sdk.payment().create(payment_data)
 
     if result['status'] not in (200, 201):
-        raise Exception(
+        raise MercadoPagoError(
             f'Erro Mercado Pago ao criar cobrança (HTTP {result["status"]}): {result["response"]}'
         )
 
     response = result['response']
     txd = response.get('point_of_interaction', {}).get('transaction_data', {})
+    pix_copia_cola = txd.get('qr_code', '')
+    qr_code_base64 = txd.get('qr_code_base64', '')
+
+    if not response.get('id') or not pix_copia_cola or not qr_code_base64:
+        raise MercadoPagoError(f'Resposta Mercado Pago sem dados PIX suficientes: {response}')
 
     return {
         'mp_payment_id': str(response['id']),
-        'pix_copia_cola': txd.get('qr_code', ''),
-        'qr_code_base64': txd.get('qr_code_base64', ''),
+        'pix_copia_cola': pix_copia_cola,
+        'qr_code_base64': qr_code_base64,
     }
 
 
@@ -73,7 +82,7 @@ def verificar_pagamento_mp(config_pix, mp_payment_id: str) -> dict:
     sdk = _get_sdk(config_pix)
     result = sdk.payment().get(int(mp_payment_id))
     if result['status'] != 200:
-        raise Exception(
+        raise MercadoPagoError(
             f'Erro Mercado Pago ao consultar pagamento {mp_payment_id}: {result["response"]}'
         )
     return result['response']

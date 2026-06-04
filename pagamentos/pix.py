@@ -155,26 +155,13 @@ def criar_pagamento(participacao, config_pix):
     txid_estatico = txid_efi[:25]
 
     if tem_credenciais_mp(config_pix):
-        # ── Mercado Pago ──────────────────────────────────────────────────
-        try:
-            email = participacao.usuario.email or 'pagador@bolao.com'
-            dados = criar_cobranca_mp(config_pix, valor, email, txid_efi)
-            pix_copia_cola = dados['pix_copia_cola']
-            qr_base64 = dados['qr_code_base64']
-            txid_final = dados['mp_payment_id']          # ID numérico do MP
-            data_expiracao = timezone.now() + timedelta(minutes=30)
-        except Exception:
-            # Fallback para QR estático se a API MP falhar
-            pix_copia_cola = gerar_payload_pix(
-                chave=config_pix.chave_pix,
-                nome=config_pix.nome_recebedor,
-                cidade='Brasil',
-                valor=valor,
-                txid=txid_estatico,
-            )
-            qr_base64 = gerar_qr_code_base64(pix_copia_cola)
-            data_expiracao = timezone.now() + timedelta(seconds=300)
-            txid_final = txid_estatico
+        # Mercado Pago: nao cair para PIX estatico se a API falhar.
+        email = participacao.usuario.email or 'pagador@bolao.com'
+        dados = criar_cobranca_mp(config_pix, valor, email, txid_efi)
+        pix_copia_cola = dados['pix_copia_cola']
+        qr_base64 = dados['qr_code_base64']
+        txid_final = dados['mp_payment_id']          # ID numerico do MP
+        data_expiracao = timezone.now() + timedelta(minutes=30)
 
     elif tem_credenciais_efi(config_pix):
         # ── EFI Bank ──────────────────────────────────────────────────────
@@ -244,26 +231,13 @@ def criar_pagamento_lote(participacoes, config_pix, usuario):
     txid_estatico = txid_lote_raw[:25]
 
     if tem_credenciais_mp(config_pix):
-        # ── Mercado Pago ──────────────────────────────────────────────────
-        try:
-            # Para lote usamos o e-mail do usuário solicitante
-            email = usuario.email or 'pagador@bolao.com'
-            dados = criar_cobranca_mp(config_pix, valor_total, email, txid_lote_raw)
-            pix_copia_cola = dados['pix_copia_cola']
-            qr_base64 = dados['qr_code_base64']
-            txid_final = dados['mp_payment_id']
-            data_expiracao = timezone.now() + timedelta(minutes=30)
-        except Exception:
-            pix_copia_cola = gerar_payload_pix(
-                chave=config_pix.chave_pix,
-                nome=config_pix.nome_recebedor,
-                cidade='Brasil',
-                valor=valor_total,
-                txid=txid_estatico,
-            )
-            qr_base64 = gerar_qr_code_base64(pix_copia_cola)
-            data_expiracao = timezone.now() + timedelta(seconds=300)
-            txid_final = txid_estatico
+        # Mercado Pago: nao cair para PIX estatico se a API falhar.
+        email = usuario.email or 'pagador@bolao.com'
+        dados = criar_cobranca_mp(config_pix, valor_total, email, txid_lote_raw)
+        pix_copia_cola = dados['pix_copia_cola']
+        qr_base64 = dados['qr_code_base64']
+        txid_final = dados['mp_payment_id']
+        data_expiracao = timezone.now() + timedelta(minutes=30)
 
     elif tem_credenciais_efi(config_pix):
         # ── EFI Bank ──────────────────────────────────────────────────────
