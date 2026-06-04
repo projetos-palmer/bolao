@@ -11,6 +11,8 @@ urlpatterns = [
     path('<int:pk>/status/', views.StatusPagamentoView.as_view(), name='status_pagamento'),
     # Webhook EFI Bank — recebe notificações automáticas de PIX recebido
     path('webhook/pix/', views.WebhookPixEfiView.as_view(), name='webhook_pix_efi'),
+    # Webhook Mercado Pago — recebe notificações de PIX aprovado
+    path('webhook/mp/', views.WebhookPixMPView.as_view(), name='webhook_pix_mp'),
     # Ação admin: registrar webhook no EFI Bank
     path('webhook/registrar/', views.RegistrarWebhookEfiView.as_view(), name='registrar_webhook_efi'),
     # Pagamento em lote (múltiplos bolões, um único PIX)

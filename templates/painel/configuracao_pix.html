@@ -40,6 +40,24 @@
         {% endif %}
       {% endfor %}
 
+      <h2 class="text-base font-bold text-gray-700 mb-1 border-b pb-2 mt-6">💳 Confirmação Automática — Mercado Pago</h2>
+      <p class="text-xs text-gray-500 mb-3">
+        Recomendado. Cole o <strong>Access Token de Produção</strong> da sua conta Mercado Pago.<br>
+        Se preenchido, o Mercado Pago é usado com <strong>prioridade</strong> sobre o EFI Bank.<br>
+        Encontre o token em <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank" class="text-blue-600 underline">Painel MP → Suas integrações → Credenciais de Produção</a>.<br>
+        O token começa com <code class="bg-gray-100 px-1 rounded">APP_USR-...</code>
+      </p>
+      {% for field in form %}
+        {% if field.name == 'mp_access_token' %}
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">{{ field.label }}</label>
+          {% render_field field class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-campo outline-none transition font-mono text-xs" placeholder="APP_USR-..." %}
+          {% if field.help_text %}<p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>{% endif %}
+          {% if field.errors %}{% for e in field.errors %}<p class="text-red-600 text-xs mt-1">{{ e }}</p>{% endfor %}{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+
       <button type="submit" class="w-full bg-campo text-white py-3 rounded-xl font-bold hover:bg-campo-dark transition mt-2">💾 Salvar</button>
     </form>
   </div>

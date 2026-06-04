@@ -14,6 +14,7 @@ from django.utils.decorators import method_decorator
 from boloes.models import ParticipacaoBolao
 from .models import Pagamento, PagamentoLote, ConfiguracaoPixAdministrador
 from .pix import criar_pagamento, criar_pagamento_lote, registrar_webhook_efi, tem_credenciais_efi
+from .pix_mp import tem_credenciais_mp, verificar_pagamento_mp
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,10 @@ class PagamentoPixDetailView(LoginRequiredMixin, View):
             return redirect('boloes:bolao_detail', pk=participacao.bolao.pk)
 
         config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
-        confirmacao_automatica = tem_credenciais_efi(config_pix) if config_pix else False
+        confirmacao_automatica = (
+            (tem_credenciais_mp(config_pix) or tem_credenciais_efi(config_pix))
+            if config_pix else False
+        )
 
         return render(request, self.template_name, {
             'participacao': participacao,
@@ -247,7 +251,10 @@ class PagamentoLoteDetailView(LoginRequiredMixin, View):
             return redirect('boloes:meus_jogos')
 
         config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
-        confirmacao_automatica = tem_credenciais_efi(config_pix) if config_pix else False
+        confirmacao_automatica = (
+            (tem_credenciais_mp(config_pix) or tem_credenciais_efi(config_pix))
+            if config_pix else False
+        )
 
         participacoes = ParticipacaoBolao.objects.filter(
             pagamento__lote=lote
@@ -274,6 +281,76 @@ class StatusPagamentoLoteView(LoginRequiredMixin, View):
             'expirado': lote.status == 'expirado' or lote.esta_expirado,
             'url_confirmado': url_confirmado,
         })
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class WebhookPixMPView(View):
+    """
+    Recebe notificações de pagamento do Mercado Pago.
+    Esta URL deve ser registrada no painel MP como webhook de Pagamentos.
+    Não requer autenticação de sessão (chamada feita pelo servidor do MP).
+    """
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse({'erro': 'corpo inválido'}, status=400)
+
+        # MP envia: {"type": "payment", "data": {"id": "12345"}}
+        if data.get('type') != 'payment':
+            return JsonResponse({'ok': 'ignorado'}, status=200)
+
+        mp_payment_id = str(data.get('data', {}).get('id', '')).strip()
+        if not mp_payment_id:
+            return JsonResponse({'erro': 'id ausente'}, status=400)
+
+        try:
+            config_pix = ConfiguracaoPixAdministrador.objects.filter(ativo=True).first()
+            if not config_pix:
+                return JsonResponse({'erro': 'sem configuração ativa'}, status=500)
+            info = verificar_pagamento_mp(config_pix, mp_payment_id)
+        except Exception as exc:
+            logger.error('Webhook MP: erro ao verificar pagamento %s: %s', mp_payment_id, exc)
+            return JsonResponse({'erro': 'falha ao verificar pagamento'}, status=500)
+
+        if info.get('status') != 'approved':
+            return JsonResponse({'ok': 'não aprovado ainda'}, status=200)
+
+        # Tenta confirmar lote (txid = mp_payment_id)
+        lote_confirmado = False
+        try:
+            lote = PagamentoLote.objects.get(txid=mp_payment_id, status='pendente')
+            lote.status = 'confirmado'
+            lote.data_confirmacao = timezone.now()
+            lote.save(update_fields=['status', 'data_confirmacao'])
+            for pag in lote.pagamentos.select_related('participacao').all():
+                pag.status = 'confirmado'
+                pag.data_confirmacao = lote.data_confirmacao
+                pag.save(update_fields=['status', 'data_confirmacao'])
+                pag.participacao.status = 'confirmado'
+                pag.participacao.save(update_fields=['status'])
+            lote_confirmado = True
+            logger.info('Lote %s confirmado via webhook MP: txid=%s', lote.pk, mp_payment_id)
+        except PagamentoLote.DoesNotExist:
+            pass
+
+        if not lote_confirmado:
+            try:
+                pagamento = Pagamento.objects.select_related('participacao').get(
+                    txid=mp_payment_id,
+                    status='pendente',
+                )
+                pagamento.status = 'confirmado'
+                pagamento.data_confirmacao = timezone.now()
+                pagamento.save(update_fields=['status', 'data_confirmacao'])
+                pagamento.participacao.status = 'confirmado'
+                pagamento.participacao.save(update_fields=['status'])
+                logger.info('Pagamento confirmado automaticamente via webhook MP: txid=%s', mp_payment_id)
+            except Pagamento.DoesNotExist:
+                logger.warning('Webhook MP: txid desconhecido ou já confirmado: %s', mp_payment_id)
+
+        return JsonResponse({'ok': True})
 
 
 class PagamentoLoteConfirmadoView(LoginRequiredMixin, View):

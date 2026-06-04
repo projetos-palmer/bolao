@@ -57,6 +57,7 @@ class ConfiguracaoPixUpdateView(AdminMixin, UpdateView):
     fields = [
         'tipo_chave', 'chave_pix', 'nome_recebedor', 'banco', 'documento_recebedor', 'ativo',
         'client_id_efi', 'client_secret_efi', 'certificado_efi', 'ambiente_efi',
+        'mp_access_token',
     ]
     template_name = 'painel/configuracao_pix.html'
     success_url = reverse_lazy('painel:dashboard')

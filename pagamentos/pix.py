@@ -141,20 +141,43 @@ def enviar_premio_pix(config_pix, chave_destino: str, valor: float, id_envio: st
 def criar_pagamento(participacao, config_pix):
     """
     Cria um Pagamento para a participação.
-    - Se credenciais EFI Bank estiverem configuradas: cria cobrança real via API
-      e o sistema confirma automaticamente via webhook quando o PIX for recebido.
-    - Caso contrário: gera QR Code estático (requer confirmação manual pelo admin).
+    Prioridade:
+      1. Mercado Pago — se mp_access_token configurado (confirmação automática via webhook MP)
+      2. EFI Bank     — se credenciais EFI configuradas (confirmação automática via webhook EFI)
+      3. QR estático  — fallback, exige confirmação manual pelo admin
     Retorna o objeto Pagamento criado.
     """
     from .models import Pagamento
+    from .pix_mp import tem_credenciais_mp, criar_cobranca_mp
 
     valor = float(participacao.bolao.valor_participacao)
-    # txid para EFI Bank: 26-35 chars alfanuméricos (UUID sem hífens = 32 chars)
-    txid_efi = str(participacao.codigo_identificador).replace('-', '')
-    # txid para QR estático: máx 25 chars (limitação EMV)
+    txid_efi = str(participacao.codigo_identificador).replace('-', '')   # 32 chars
     txid_estatico = txid_efi[:25]
 
-    if tem_credenciais_efi(config_pix):
+    if tem_credenciais_mp(config_pix):
+        # ── Mercado Pago ──────────────────────────────────────────────────
+        try:
+            email = participacao.usuario.email or 'pagador@bolao.com'
+            dados = criar_cobranca_mp(config_pix, valor, email, txid_efi)
+            pix_copia_cola = dados['pix_copia_cola']
+            qr_base64 = dados['qr_code_base64']
+            txid_final = dados['mp_payment_id']          # ID numérico do MP
+            data_expiracao = timezone.now() + timedelta(minutes=30)
+        except Exception:
+            # Fallback para QR estático se a API MP falhar
+            pix_copia_cola = gerar_payload_pix(
+                chave=config_pix.chave_pix,
+                nome=config_pix.nome_recebedor,
+                cidade='Brasil',
+                valor=valor,
+                txid=txid_estatico,
+            )
+            qr_base64 = gerar_qr_code_base64(pix_copia_cola)
+            data_expiracao = timezone.now() + timedelta(seconds=300)
+            txid_final = txid_estatico
+
+    elif tem_credenciais_efi(config_pix):
+        # ── EFI Bank ──────────────────────────────────────────────────────
         try:
             resposta = criar_cobranca_efi(config_pix, valor, txid_efi)
             pix_copia_cola = resposta.get('pixCopiaECola', '')
@@ -164,7 +187,6 @@ def criar_pagamento(participacao, config_pix):
             data_expiracao = timezone.now() + timedelta(seconds=300)
             txid_final = txid_efi
         except Exception:
-            # Fallback: QR estático caso a API EFI falhe
             pix_copia_cola = gerar_payload_pix(
                 chave=config_pix.chave_pix,
                 nome=config_pix.nome_recebedor,
@@ -176,7 +198,7 @@ def criar_pagamento(participacao, config_pix):
             data_expiracao = timezone.now() + timedelta(seconds=300)
             txid_final = txid_estatico
     else:
-        # QR estático sem integração bancária (confirmação manual)
+        # ── QR estático (confirmação manual) ─────────────────────────────
         pix_copia_cola = gerar_payload_pix(
             chave=config_pix.chave_pix,
             nome=config_pix.nome_recebedor,
@@ -209,16 +231,42 @@ def criar_pagamento_lote(participacoes, config_pix, usuario):
     todas as participações listadas.
     Também cria os Pagamento individuais vinculados ao lote.
     Retorna o objeto PagamentoLote criado.
+    Prioridade: Mercado Pago > EFI Bank > QR estático.
     """
     from .models import Pagamento, PagamentoLote
+    from .pix_mp import tem_credenciais_mp, criar_cobranca_mp
 
     valor_total = sum(float(p.bolao.valor_participacao) for p in participacoes)
 
     # txid do lote: UUID sem hífens (32 chars) — prefixado com 'L' para não
     # colidir com txids individuais
     txid_lote_raw = 'L' + uuid.uuid4().hex[:31]  # 32 chars
+    txid_estatico = txid_lote_raw[:25]
 
-    if tem_credenciais_efi(config_pix):
+    if tem_credenciais_mp(config_pix):
+        # ── Mercado Pago ──────────────────────────────────────────────────
+        try:
+            # Para lote usamos o e-mail do usuário solicitante
+            email = usuario.email or 'pagador@bolao.com'
+            dados = criar_cobranca_mp(config_pix, valor_total, email, txid_lote_raw)
+            pix_copia_cola = dados['pix_copia_cola']
+            qr_base64 = dados['qr_code_base64']
+            txid_final = dados['mp_payment_id']
+            data_expiracao = timezone.now() + timedelta(minutes=30)
+        except Exception:
+            pix_copia_cola = gerar_payload_pix(
+                chave=config_pix.chave_pix,
+                nome=config_pix.nome_recebedor,
+                cidade='Brasil',
+                valor=valor_total,
+                txid=txid_estatico,
+            )
+            qr_base64 = gerar_qr_code_base64(pix_copia_cola)
+            data_expiracao = timezone.now() + timedelta(seconds=300)
+            txid_final = txid_estatico
+
+    elif tem_credenciais_efi(config_pix):
+        # ── EFI Bank ──────────────────────────────────────────────────────
         try:
             resposta = criar_cobranca_efi(config_pix, valor_total, txid_lote_raw)
             pix_copia_cola = resposta.get('pixCopiaECola', '')
@@ -228,7 +276,6 @@ def criar_pagamento_lote(participacoes, config_pix, usuario):
             data_expiracao = timezone.now() + timedelta(seconds=300)
             txid_final = txid_lote_raw
         except Exception:
-            txid_estatico = txid_lote_raw[:25]
             pix_copia_cola = gerar_payload_pix(
                 chave=config_pix.chave_pix,
                 nome=config_pix.nome_recebedor,
@@ -240,7 +287,7 @@ def criar_pagamento_lote(participacoes, config_pix, usuario):
             data_expiracao = timezone.now() + timedelta(seconds=300)
             txid_final = txid_estatico
     else:
-        txid_estatico = txid_lote_raw[:25]
+        # ── QR estático (confirmação manual) ─────────────────────────────
         pix_copia_cola = gerar_payload_pix(
             chave=config_pix.chave_pix,
             nome=config_pix.nome_recebedor,

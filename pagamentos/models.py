@@ -44,6 +44,15 @@ class ConfiguracaoPixAdministrador(models.Model):
     ambiente_efi = models.CharField('Ambiente EFI', max_length=20, choices=AMBIENTE_EFI, default='homologacao',
                                     help_text='Use Homologação para testes e Produção para cobranças reais')
 
+    # Credencial Mercado Pago para confirmação automática de PIX
+    mp_access_token = models.CharField(
+        'Access Token (Mercado Pago)',
+        max_length=300,
+        blank=True,
+        help_text='Access Token de produção da sua conta Mercado Pago (começa com APP_USR-...). '
+                  'Se preenchido, o Mercado Pago será usado com prioridade sobre o EFI Bank.',
+    )
+
     class Meta:
         verbose_name = 'Configuração Pix do Administrador'
         verbose_name_plural = 'Configurações Pix do Administrador'
