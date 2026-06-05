@@ -115,9 +115,6 @@ class LoginUsuarioView(View):
             usuario = authenticate(request, username=cpf, password=senha)
 
             if usuario:
-                if not usuario.email_confirmado:
-                    messages.warning(request, 'Confirme seu e-mail antes de fazer login.')
-                    return render(request, self.template_name, {'form': form})
                 login(request, usuario)
                 next_url = request.GET.get('next')
                 if next_url:

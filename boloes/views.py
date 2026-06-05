@@ -94,8 +94,8 @@ class ParticiparBolaoView(LoginRequiredMixin, DetailView):
             participacao.bolao = bolao
             participacao.bloqueado_para_edicao = True
             participacao.save()
-            messages.success(request, 'Palpite salvo com sucesso. Agora realize o pagamento Pix para confirmar sua participação.')
-            return redirect('pagamentos:pagamento_pix', participacao_pk=participacao.pk)
+            messages.success(request, 'Palpite salvo com sucesso. Selecione este e outros jogos em aberto para pagar com Pix.')
+            return redirect('boloes:meus_jogos')
 
         return self.render_to_response(self.get_context_data(form=form))
 

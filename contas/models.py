@@ -4,12 +4,10 @@ from django.db import models
 
 class UsuarioManager(BaseUserManager):
 
-    def create_user(self, cpf, email, nome_completo, telefone, password=None):
+    def create_user(self, cpf, email='', nome_completo='', telefone='', password=None):
         if not cpf:
             raise ValueError('O CPF é obrigatório.')
-        if not email:
-            raise ValueError('O e-mail é obrigatório.')
-        email = self.normalize_email(email)
+        email = self.normalize_email(email) if email else None
         usuario = self.model(
             cpf=cpf,
             email=email,
@@ -34,7 +32,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     cpf = models.CharField('CPF', max_length=14, unique=True)
     nome_completo = models.CharField('Nome completo', max_length=150)
     telefone = models.CharField('Telefone', max_length=15, unique=True)
-    email = models.EmailField('E-mail', unique=True)
+    email = models.EmailField('E-mail', unique=True, blank=True, null=True)
     email_confirmado = models.BooleanField('E-mail confirmado', default=False)
     data_cadastro = models.DateTimeField('Data de cadastro', auto_now_add=True)
     is_active = models.BooleanField('Ativo', default=False)
@@ -43,7 +41,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     objects = UsuarioManager()
 
     USERNAME_FIELD = 'cpf'
-    REQUIRED_FIELDS = ['email', 'nome_completo', 'telefone']
+    REQUIRED_FIELDS = ['nome_completo', 'telefone']
 
     class Meta:
         verbose_name = 'Usuário'

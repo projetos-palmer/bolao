@@ -1,12 +1,14 @@
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
+from django.db.models import Prefetch
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 
+from boloes.models import Bolao
 from .models import Jogo, Selecao
 from .forms import FormJogo, FormSelecao
 
@@ -38,7 +40,14 @@ class PaginaInicialView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['jogos'] = Jogo.objects.filter(status='aberto').select_related('selecao_mandante', 'selecao_visitante').order_by('data_hora')[:10]
+        boloes_abertos = Bolao.objects.filter(status='aberto').order_by('valor_participacao')
+        ctx['jogos'] = (
+            Jogo.objects
+            .filter(status='aberto')
+            .select_related('selecao_mandante', 'selecao_visitante')
+            .prefetch_related(Prefetch('boloes', queryset=boloes_abertos, to_attr='boloes_abertos'))
+            .order_by('data_hora')[:10]
+        )
         return ctx
 
 

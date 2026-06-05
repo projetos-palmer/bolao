@@ -38,6 +38,13 @@
             {% else %}bg-yellow-100 text-yellow-800{% endif %}">
             {{ jogo.get_status_display }}
           </span>
+          {% if jogo.boloes_abertos %}
+            {% with bolao=jogo.boloes_abertos.0 %}
+              <p class="mt-2 text-sm font-extrabold text-ouro">R$ {{ bolao.valor_participacao|floatformat:2 }}</p>
+              <p class="text-[10px] uppercase tracking-wide text-gray-400">por palpite</p>
+              <p class="mt-1 text-xs font-bold text-campo">{{ bolao.percentual_premiacao }}% do valor total será dividido entre os ganhadores</p>
+            {% endwith %}
+          {% endif %}
         </div>
         <div class="flex-1">
           <p class="text-3xl">{{ jogo.selecao_visitante.icone|default:"🏴" }}</p>
@@ -46,6 +53,23 @@
       </div>
       {% if jogo.resultado_definido %}
         <p class="text-center font-extrabold text-campo text-xl mt-2">{{ jogo.placar_mandante }} — {{ jogo.placar_visitante }}</p>
+      {% endif %}
+      {% if jogo.boloes_abertos %}
+        {% with bolao=jogo.boloes_abertos.0 %}
+          {% if user.is_authenticated %}
+            <a href="{% url 'boloes:bolao_detail' bolao.pk %}" class="block mt-4 text-center bg-campo text-white py-2 rounded-xl font-bold hover:bg-campo-dark transition text-sm">
+              Jogar agora
+            </a>
+          {% else %}
+            <a href="{% url 'contas:login' %}" class="block mt-4 text-center bg-campo text-white py-2 rounded-xl font-bold hover:bg-campo-dark transition text-sm">
+              Jogar agora
+            </a>
+          {% endif %}
+        {% endwith %}
+      {% else %}
+        <a href="{% url 'contas:login' %}" class="block mt-4 text-center bg-campo text-white py-2 rounded-xl font-bold hover:bg-campo-dark transition text-sm">
+          Jogar agora
+        </a>
       {% endif %}
     </div>
     {% endfor %}

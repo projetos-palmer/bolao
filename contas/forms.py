@@ -11,12 +11,11 @@ class FormCadastroUsuario(forms.ModelForm):
 
     class Meta:
         model = Usuario
-        fields = ['cpf', 'nome_completo', 'telefone', 'email']
+        fields = ['cpf', 'nome_completo', 'telefone']
         widgets = {
             'cpf': forms.TextInput(attrs={'placeholder': '000.000.000-00', 'maxlength': '14'}),
             'nome_completo': forms.TextInput(attrs={'placeholder': 'Seu nome completo'}),
             'telefone': forms.TextInput(attrs={'placeholder': '(00) 99999-9999', 'maxlength': '15'}),
-            'email': forms.EmailInput(attrs={'placeholder': 'seu@email.com'}),
         }
 
     def clean_cpf(self):
@@ -48,16 +47,6 @@ class FormCadastroUsuario(forms.ModelForm):
         if qs.exists():
             raise forms.ValidationError('Este telefone já está cadastrado.')
         return telefone
-
-    def clean_email(self):
-        email = self.cleaned_data.get('email', '').lower()
-        qs = Usuario.objects.filter(email=email)
-        if self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise forms.ValidationError('Este e-mail já está cadastrado.')
-        return email
-
 
 class FormCriarSenha(forms.Form):
     """Formulário para criação de senha após cadastro."""
