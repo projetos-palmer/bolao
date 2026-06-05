@@ -17,6 +17,103 @@
   </div>
 </div>
 
+<!-- Enquete Campeão -->
+<section id="enquete-campeao" class="relative overflow-hidden bg-gradient-to-br from-campo via-green-500 to-emerald-700 text-white rounded-3xl shadow-xl p-6 md:p-8 mb-10">
+  <div class="absolute -top-10 -right-10 text-9xl opacity-10">🏆</div>
+  <div class="absolute -bottom-12 -left-8 text-9xl opacity-10">⚽</div>
+  <div class="relative grid lg:grid-cols-2 gap-8 items-center">
+    <div>
+      <span class="inline-flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full text-sm font-bold mb-4">
+        🔥 Enquete da torcida
+      </span>
+      <h2 class="text-3xl md:text-4xl font-extrabold leading-tight mb-3">
+        Enquete: Qual seleção será a campeã do mundo?
+      </h2>
+      <p class="text-green-50 text-lg mb-5">
+        A arquibancada virtual está aberta! Procure sua seleção favorita, deixe seu voto e veja quem está liderando a festa rumo à taça.
+      </p>
+
+      {% if selecoes %}
+      <form method="post" action="{% url 'jogos:votar_campeao' %}" class="bg-white/95 text-gray-800 rounded-2xl p-4 shadow-lg">
+        {% csrf_token %}
+        <label for="busca-selecao" class="block text-sm font-extrabold text-campo mb-2">
+          Procure e escolha sua seleção
+        </label>
+        <input
+          type="text"
+          id="busca-selecao"
+          placeholder="Digite para procurar, exemplo: Brasil"
+          class="w-full border border-green-100 rounded-xl px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-ouro"
+        >
+        <select
+          id="select-selecao-campea"
+          name="selecao"
+          required
+          size="6"
+          class="w-full border border-green-100 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-campo bg-white"
+        >
+          {% for selecao in selecoes %}
+            <option value="{{ selecao.pk }}" data-nome="{{ selecao.nome|lower }} {{ selecao.sigla|lower }}" {% if voto_campeao_selecao_id == selecao.pk %}selected{% endif %}>
+              {{ selecao.icone|default:"🏴" }} {{ selecao.nome }}{% if selecao.sigla %} — {{ selecao.sigla }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="mt-4 w-full bg-ouro text-white px-6 py-3 rounded-xl font-extrabold text-lg hover:bg-yellow-600 transition shadow">
+          🏆 Votar na minha campeã!
+        </button>
+        <p class="text-xs text-gray-500 text-center mt-3">
+          Não precisa fazer login. Um voto por navegador; se votar novamente, seu voto será atualizado.
+        </p>
+      </form>
+      {% else %}
+        <div class="bg-white/20 rounded-2xl p-4 font-semibold">
+          As seleções ainda não foram cadastradas.
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="bg-white text-gray-800 rounded-3xl p-5 md:p-6 shadow-xl">
+      <h3 class="text-2xl font-extrabold text-campo mb-1">🥇 Top 3 da torcida</h3>
+      <p class="text-sm text-gray-500 mb-5">
+        {% if total_votos_enquete %}
+          {{ total_votos_enquete }} voto(s) já entraram nessa disputa!
+        {% else %}
+          Seja a primeira pessoa a colocar sua seleção no placar.
+        {% endif %}
+      </p>
+
+      {% if selecoes_mais_votadas %}
+        <div class="space-y-4">
+          {% for selecao in selecoes_mais_votadas %}
+          <div>
+            <div class="flex items-center justify-between gap-3 mb-2">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-green-100 text-campo flex items-center justify-center font-extrabold">{{ forloop.counter }}º</span>
+                <span class="text-2xl">{{ selecao.icone|default:"🏴" }}</span>
+                <div>
+                  <p class="font-extrabold">{{ selecao.nome }}</p>
+                  <p class="text-xs text-gray-500">{{ selecao.total_votos }} voto(s)</p>
+                </div>
+              </div>
+              <span class="font-extrabold text-campo text-lg">{{ selecao.percentual_votos|floatformat:1 }}%</span>
+            </div>
+            <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-ouro to-yellow-400 rounded-full" style="width: {{ selecao.percentual_barra }}%"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center bg-green-50 rounded-2xl p-6">
+          <p class="text-5xl mb-3">🏟️</p>
+          <p class="font-bold text-campo">A torcida ainda está chegando.</p>
+          <p class="text-sm text-gray-500">Vote agora e faça sua campeã aparecer aqui!</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
 <!-- Jogos em destaque -->
 {% if jogos %}
 <div class="mt-8">
@@ -76,4 +173,28 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const buscaSelecao = document.getElementById('busca-selecao');
+  const selectSelecaoCampea = document.getElementById('select-selecao-campea');
+
+  if (buscaSelecao && selectSelecaoCampea) {
+    buscaSelecao.addEventListener('input', function() {
+      const termo = this.value.trim().toLowerCase();
+      Array.from(selectSelecaoCampea.options).forEach(function(option) {
+        const nome = option.dataset.nome || option.textContent.toLowerCase();
+        option.hidden = termo && !nome.includes(termo);
+      });
+
+      const primeiraVisivel = Array.from(selectSelecaoCampea.options).find(function(option) {
+        return !option.hidden;
+      });
+      if (primeiraVisivel) {
+        selectSelecaoCampea.value = primeiraVisivel.value;
+      }
+    });
+  }
+</script>
 {% endblock %}

@@ -1,7 +1,7 @@
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
 from django.http import JsonResponse
@@ -9,7 +9,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from boloes.models import Bolao
-from .models import Jogo, Selecao
+from .models import Jogo, Selecao, VotoCampeao
 from .forms import FormJogo, FormSelecao
 
 
@@ -48,7 +48,51 @@ class PaginaInicialView(TemplateView):
             .prefetch_related(Prefetch('boloes', queryset=boloes_abertos, to_attr='boloes_abertos'))
             .order_by('data_hora')[:10]
         )
+        total_votos = VotoCampeao.objects.count()
+        selecoes_mais_votadas = (
+            Selecao.objects
+            .annotate(total_votos=Count('votos_campeao'))
+            .filter(total_votos__gt=0)
+            .order_by('-total_votos', 'nome')[:3]
+        )
+        for selecao in selecoes_mais_votadas:
+            selecao.percentual_votos = (selecao.total_votos / total_votos * 100) if total_votos else 0
+            selecao.percentual_barra = f'{selecao.percentual_votos:.1f}'
+        ctx['selecoes'] = Selecao.objects.all()
+        ctx['total_votos_enquete'] = total_votos
+        ctx['selecoes_mais_votadas'] = selecoes_mais_votadas
+        ctx['voto_campeao_selecao_id'] = (
+            VotoCampeao.objects
+            .filter(session_key=self.request.session.session_key)
+            .values_list('selecao_id', flat=True)
+            .first()
+        )
         return ctx
+
+
+def votar_campeao(request):
+    if request.method != 'POST':
+        return redirect('jogos:inicio')
+
+    selecao = get_object_or_404(Selecao, pk=request.POST.get('selecao'))
+    if not request.session.session_key:
+        request.session.create()
+
+    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+    if ip and ',' in ip:
+        ip = ip.split(',')[0].strip()
+    user_agent = request.META.get('HTTP_USER_AGENT', '')[:255]
+
+    VotoCampeao.objects.update_or_create(
+        session_key=request.session.session_key,
+        defaults={
+            'selecao': selecao,
+            'ip': ip or None,
+            'user_agent': user_agent,
+        },
+    )
+    messages.success(request, f'Voto confirmado! Sua torcida por {selecao.nome} entrou em campo.')
+    return redirect(f'{reverse_lazy("jogos:inicio")}#enquete-campeao')
 
 
 class JogoListView(LoginRequiredMixin, ListView):

@@ -40,6 +40,29 @@ class Selecao(models.Model):
         return f'{self.icone} {self.nome}' if self.icone else self.nome
 
 
+class VotoCampeao(models.Model):
+    """Voto público na seleção campeã da enquete."""
+    selecao = models.ForeignKey(
+        Selecao,
+        on_delete=models.CASCADE,
+        related_name='votos_campeao',
+        verbose_name='Seleção campeã',
+    )
+    session_key = models.CharField('Chave da sessão', max_length=40, unique=True)
+    ip = models.GenericIPAddressField('IP', blank=True, null=True)
+    user_agent = models.CharField('Navegador', max_length=255, blank=True)
+    criado_em = models.DateTimeField('Criado em', auto_now_add=True)
+    atualizado_em = models.DateTimeField('Atualizado em', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Voto da enquete'
+        verbose_name_plural = 'Votos da enquete'
+        ordering = ['-atualizado_em']
+
+    def __str__(self):
+        return f'Voto em {self.selecao}'
+
+
 class Jogo(models.Model):
     """Partida da Copa do Mundo."""
     selecao_mandante = models.ForeignKey(

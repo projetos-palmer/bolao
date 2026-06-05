@@ -5,6 +5,7 @@ app_name = 'jogos'
 
 urlpatterns = [
     path('', views.PaginaInicialView.as_view(), name='inicio'),
+    path('votar-campeao/', views.votar_campeao, name='votar_campeao'),
     path('lista/', views.JogoListView.as_view(), name='jogo_list'),
     path('<int:pk>/', views.JogoDetailView.as_view(), name='jogo_detail'),
     path('novo/', views.JogoCreateView.as_view(), name='jogo_create'),
