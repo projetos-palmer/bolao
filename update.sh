@@ -15,6 +15,7 @@ info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 cd "${APP_DIR}"
 
 info "Baixando atualizações do repositório..."
+git config --global --add safe.directory "${APP_DIR}"
 git fetch origin master
 git reset --hard origin/master
 

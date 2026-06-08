@@ -13,7 +13,7 @@
   {% endif %}
 
   <div class="bg-white rounded-2xl shadow p-6">
-    <form method="post" novalidate>
+    <form id="pix-form" method="post" novalidate>
       {% csrf_token %}
       {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
@@ -160,7 +160,7 @@
   tipoSelect.addEventListener('change', () => atualizarCampo(tipoSelect.value));
 
   // Sincroniza campo visível → hidden antes do submit
-  document.querySelector('form').addEventListener('submit', () => {
+  document.getElementById('pix-form').addEventListener('submit', () => {
     const tipo = tipoSelect.value;
     if (tipo === 'cpf')       campoHidden.value = campoCPF.value;
     else if (tipo === 'telefone') campoHidden.value = campoTel.value;
